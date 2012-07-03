@@ -242,7 +242,7 @@ func (self *Tree) DeleteMax() (root *Tree) {
 }
 
 func (self *Node) deleteMax() *Node {
-	if self.Left != nil && self.Left.Color == Red {
+	if self.Left != nil && self.Left.color() == Red {
 		self = self.rotateRight()
 	}
 	if self.Right == nil {
