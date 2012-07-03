@@ -147,7 +147,14 @@ func (self *Node) moveRedRight() *Node {
 // Get returns the first match of q in the Tree. If insertion without
 // replacement is used, this is probably not what you want.
 func (self *Tree) Get(q Comparable) Comparable {
-	return (*Node)(self).search(q).Elem
+	if self == nil {
+		return nil
+	}
+	n := (*Node)(self).search(q)
+	if n == nil {
+		return nil
+	}
+	return n.Elem
 }
 
 func (self *Node) search(q Comparable) (n *Node) {
