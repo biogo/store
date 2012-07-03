@@ -227,6 +227,16 @@ func (s *S) TestRotateRight(c *check.C) {
 	c.Check(tree, check.DeepEquals, rotTree)
 }
 
+func (s *S) TestNilOperations(c *check.C) {
+	var e *Tree
+	for _, t := range []*Tree{nil, {}} {
+		c.Check(t.Min(), check.Equals, nil)
+		c.Check(t.Max(), check.Equals, nil)
+		c.Check(t.DeleteMin(), check.Equals, e)
+		c.Check(t.DeleteMax(), check.Equals, e)
+	}
+}
+
 func (s *S) TestInsertion(c *check.C) {
 	min, max := compRune(0), compRune(1000)
 	for _, t := range []*Tree{nil, {}} {
