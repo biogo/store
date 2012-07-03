@@ -225,7 +225,13 @@ func (self *Node) insert(e Comparable) (root *Node) {
 
 // DeleteMin deletes the node with the minimum value in the tree.
 func (self *Tree) DeleteMin() (root *Tree) {
+	if self == nil {
+		return
+	}
 	root = (*Tree)((*Node)(self).deleteMin())
+	if root == nil {
+		return
+	}
 	root.Color = Black
 	return
 }
@@ -243,7 +249,13 @@ func (self *Node) deleteMin() *Node {
 
 // DeleteMax deletes the node with the maximum value in the tree.
 func (self *Tree) DeleteMax() (root *Tree) {
+	if self == nil {
+		return
+	}
 	root = (*Tree)((*Node)(self).deleteMax())
+	if root == nil {
+		return
+	}
 	root.Color = Black
 	return
 }
