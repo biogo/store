@@ -229,43 +229,45 @@ func (s *S) TestRotateRight(c *check.C) {
 
 func (s *S) TestInsertion(c *check.C) {
 	min, max := compRune(0), compRune(1000)
-	t := &Tree{}
-	for i := min; i <= max; i++ {
-		t = t.Insert(i)
-		c.Check(t.isBST(), check.Equals, true)
-		c.Check(t.is23_234(), check.Equals, true)
-		c.Check(t.isBalanced(), check.Equals, true)
+	for _, t := range []*Tree{nil, {}} {
+		for i := min; i <= max; i++ {
+			t = t.Insert(i)
+			c.Check(t.isBST(), check.Equals, true)
+			c.Check(t.is23_234(), check.Equals, true)
+			c.Check(t.isBalanced(), check.Equals, true)
+		}
+		if c.Failed() {
+			c.Log(describeTree((*Node)(t), false, true))
+		}
+		c.Check(t.Min(), check.Equals, compRune(min))
+		c.Check(t.Max(), check.Equals, compRune(max))
 	}
-	if c.Failed() {
-		c.Log(describeTree((*Node)(t), false, true))
-	}
-	c.Check(t.Min(), check.Equals, compRune(min))
-	c.Check(t.Max(), check.Equals, compRune(max))
 }
 
 func (s *S) TestDeletion(c *check.C) {
 	min, max := compRune(0), compRune(10000)
-	t := &Tree{}
-	for i := min; i <= max; i++ {
-		t = t.Insert(i)
-	}
-	for i := min; i <= max; i++ {
-		t = t.Delete(i)
-		if i < max {
-			c.Check(t.isBST(), check.Equals, true)
-			c.Check(t.is23_234(), check.Equals, true)
-			c.Check(t.isBalanced(), check.Equals, true)
-			if c.Failed() {
-				c.Log(describeTree((*Node)(t), false, true))
+	for _, t := range []*Tree{nil, {}} {
+		for i := min; i <= max; i++ {
+			t = t.Insert(i)
+		}
+		for i := min; i <= max; i++ {
+			t = t.Delete(i)
+			if i < max {
+				c.Check(t.isBST(), check.Equals, true)
+				c.Check(t.is23_234(), check.Equals, true)
+				c.Check(t.isBalanced(), check.Equals, true)
+				if c.Failed() {
+					c.Log(describeTree((*Node)(t), false, true))
+				}
 			}
 		}
+		c.Check(t, check.Equals, (*Tree)(nil))
 	}
-	c.Check(t, check.Equals, (*Tree)(nil))
 }
 
 func (s *S) TestRandomInsertion(c *check.C) {
 	count, max := 100000, 1000
-	t := &Tree{}
+	var t *Tree
 	for i := 0; i < count; i++ {
 		t = t.Insert(compRune(rand.Intn(max)))
 		c.Check(t.isBST(), check.Equals, true)
@@ -280,7 +282,7 @@ func (s *S) TestRandomInsertion(c *check.C) {
 func (s *S) TestRandomDeletion(c *check.C) {
 	count, max := 100000, 1000
 	r := make([]compRune, count)
-	t := &Tree{}
+	var t *Tree
 	for i := range r {
 		r[i] = compRune(rand.Intn(max))
 		t = t.Insert(r[i])
@@ -301,7 +303,7 @@ func (s *S) TestRandomDeletion(c *check.C) {
 
 func (s *S) TestDeleteMinMax(c *check.C) {
 	min, max := compRune(0), compRune(10000)
-	t := &Tree{}
+	var t *Tree
 	for i := min; i <= max; i++ {
 		t = t.Insert(i)
 	}
@@ -323,7 +325,7 @@ func (s *S) TestDeleteMinMax(c *check.C) {
 
 func (s *S) TestRandomInsertionDeletion(c *check.C) {
 	count, max := 100000, 1000
-	t := &Tree{}
+	var t *Tree
 	for i := 0; i < count; i++ {
 		if rand.Float64() < 0.5 {
 			t = t.Insert(compRune(rand.Intn(max)))
