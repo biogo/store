@@ -316,17 +316,13 @@ func (self *Node) delete(e Comparable) (root *Node) {
 // Return the minimum value stored in the tree. This will be the left-most value if
 // insertion without replacement is allowed.
 func (self *Tree) Min() Comparable {
-	n := (*Node)(self).min()
-	if n == nil {
-		return nil
-	}
-	return n.Elem
-}
-
-func (self *Node) min() *Node {
 	if self == nil {
 		return nil
 	}
+	return (*Node)(self).min().Elem
+}
+
+func (self *Node) min() *Node {
 	if self.Left == nil {
 		return self
 	}
@@ -336,17 +332,13 @@ func (self *Node) min() *Node {
 // Return the maximum value stored in the tree. This will be the right-most value if
 // insertion without replacement is allowed.
 func (self *Tree) Max() Comparable {
-	n := (*Node)(self).max()
-	if n == nil {
-		return nil
-	}
-	return n.Elem
-}
-
-func (self *Node) max() *Node {
 	if self == nil {
 		return nil
 	}
+	return (*Node)(self).max().Elem
+}
+
+func (self *Node) max() *Node {
 	if self.Right == nil {
 		return self
 	}
