@@ -353,3 +353,59 @@ func (s *S) TestRandomInsertionDeletion(c *check.C) {
 		c.Log(describeTree((*Node)(t), false, true))
 	}
 }
+
+// Benchmarks
+
+type compInt int
+
+func (ci compInt) Compare(i Comparable) int {
+	return int(ci) - int(i.(compInt))
+}
+
+type compIntNoRep int
+
+func (ci compIntNoRep) Compare(i Comparable) int {
+	c := int(ci) - int(i.(compIntNoRep))
+	if c == 0 {
+		return 1
+	}
+	return c
+}
+
+func BenchmarkInsert(b *testing.B) {
+	var t *Tree
+	for i := 0; i < b.N; i++ {
+		t = t.Insert(compInt(b.N - i))
+	}
+}
+
+func BenchmarkInsertNoRep(b *testing.B) {
+	var t *Tree
+	for i := 0; i < b.N; i++ {
+		t = t.Insert(compIntNoRep(b.N - i))
+	}
+}
+
+func BenchmarkDelete(b *testing.B) {
+	b.StopTimer()
+	var t *Tree
+	for i := 0; i < b.N; i++ {
+		t = t.Insert(compInt(b.N - i))
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		t = t.Delete(compInt(i))
+	}
+}
+
+func BenchmarkDeleteMin(b *testing.B) {
+	b.StopTimer()
+	var t *Tree
+	for i := 0; i < b.N; i++ {
+		t = t.Insert(compInt(b.N - i))
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		t.DeleteMin()
+	}
+}
