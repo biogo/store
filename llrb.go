@@ -66,8 +66,7 @@ type Node struct {
 	Color       Color
 }
 
-// A Tree represent the root node of an LLRB tree. Public methods of nodes are exposed
-// through this type.
+// A Tree represent the root node of an LLRB tree. Public methods are exposed through this type.
 type Tree Node
 
 // Helper methods
@@ -177,7 +176,7 @@ func (self *Node) search(q Comparable) (n *Node) {
 // with e or when a nil node is reached. Insertion without replacement can
 // specified by ensuring that e.Compare() never returns 0. If insert without
 // replacement is performed, a distinct query Comparable must be used that
-// does return 0 for a Compare() call.
+// can return 0 with a Compare() call.
 func (self *Tree) Insert(e Comparable) (root *Tree) {
 	root = (*Tree)((*Node)(self).insert(e))
 	root.Color = Black
@@ -223,7 +222,8 @@ func (self *Node) insert(e Comparable) (root *Node) {
 	return self
 }
 
-// DeleteMin deletes the node with the minimum value in the tree.
+// DeleteMin deletes the node with the minimum value in the tree. If insertion without
+// replacement has been used the the left-most minimum will be deleted.
 func (self *Tree) DeleteMin() (root *Tree) {
 	if self == nil {
 		return
@@ -247,7 +247,8 @@ func (self *Node) deleteMin() *Node {
 	return self.fixUp()
 }
 
-// DeleteMax deletes the node with the maximum value in the tree.
+// DeleteMax deletes the node with the maximum value in the tree. If insertion without
+// replacement has been used the the right-most maximum will be deleted.
 func (self *Tree) DeleteMax() (root *Tree) {
 	if self == nil {
 		return
@@ -313,8 +314,8 @@ func (self *Node) delete(e Comparable) (root *Node) {
 	return self.fixUp()
 }
 
-// Return the minimum value stored in the tree. This will be the left-most value if
-// insertion without replacement is allowed.
+// Return the minimum value stored in the tree. This will be the left-most minimum value if
+// insertion without replacement has been used.
 func (self *Tree) Min() Comparable {
 	if self == nil {
 		return nil
@@ -329,8 +330,8 @@ func (self *Node) min() *Node {
 	return self.Left.min()
 }
 
-// Return the maximum value stored in the tree. This will be the right-most value if
-// insertion without replacement is allowed.
+// Return the maximum value stored in the tree. This will be the right-most maximum value if
+// insertion without replacement has been used.
 func (self *Tree) Max() Comparable {
 	if self == nil {
 		return nil
@@ -348,8 +349,8 @@ func (self *Node) max() *Node {
 // An Operation is a function that operates on a Comparable.
 type Operation func(Comparable)
 
-// Do performs fn on all values stored in the tree. If fn alters the values of
-// stored values, future tree operation behaviors are undefined.
+// Do performs fn on all values stored in the tree. If fn alters stored values, future tree
+// operation behaviors are undefined.
 func (self *Tree) Do(fn Operation) {
 	(*Node)(self).do(fn)
 }
@@ -365,8 +366,8 @@ func (self *Node) do(fn Operation) {
 
 // DoRange performs fn on all values stored in the tree between from and to. If from is
 // less than to, the operations are performed from left to right. If from is greater than
-// to then the operations are performed from right to left. If fn alters the values of
-// stored values, future tree operation behaviors are undefined.
+// to then the operations are performed from right to left. If fn alters stored values,
+// future tree operation behaviors are undefined.
 func (self *Tree) DoRange(fn Operation, from, to Comparable) {
 	switch order := from.Compare(to); {
 	case order < 0:
@@ -411,7 +412,7 @@ func (self *Node) doRangeReverse(fn Operation, from, to Comparable) {
 }
 
 // DoMatch performs fn on all values stored in the tree that match q according to Compare.
-// If fn alters the values of stored values, future tree operation behaviors are undefined.
+// If fn alters stored values, future tree operation behaviors are undefined.
 func (self *Tree) DoMatching(fn Operation, q Comparable) {
 	(*Node)(self).doMatch(fn, q)
 }
