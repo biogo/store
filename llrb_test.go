@@ -22,6 +22,8 @@ import (
 	"testing"
 )
 
+const printTrees = false
+
 // Integrity checks - translated from http://www.cs.princeton.edu/~rs/talks/LLRB/Java/RedBlackBST.java
 
 // Is this tree a BST?
@@ -246,7 +248,7 @@ func (s *S) TestInsertion(c *check.C) {
 			c.Check(t.is23_234(), check.Equals, true)
 			c.Check(t.isBalanced(), check.Equals, true)
 		}
-		if c.Failed() {
+		if printTrees && c.Failed() {
 			c.Log(describeTree((*Node)(t), false, true))
 		}
 		c.Check(t.Min(), check.Equals, compRune(min))
@@ -266,7 +268,7 @@ func (s *S) TestDeletion(c *check.C) {
 				c.Check(t.isBST(), check.Equals, true)
 				c.Check(t.is23_234(), check.Equals, true)
 				c.Check(t.isBalanced(), check.Equals, true)
-				if c.Failed() {
+				if printTrees && c.Failed() {
 					c.Log(describeTree((*Node)(t), false, true))
 				}
 			}
@@ -284,7 +286,7 @@ func (s *S) TestRandomInsertion(c *check.C) {
 		c.Check(t.is23_234(), check.Equals, true)
 		c.Check(t.isBalanced(), check.Equals, true)
 	}
-	if c.Failed() {
+	if printTrees && c.Failed() {
 		c.Log(describeTree((*Node)(t), false, true))
 	}
 }
@@ -303,7 +305,7 @@ func (s *S) TestRandomDeletion(c *check.C) {
 			c.Check(t.isBST(), check.Equals, true)
 			c.Check(t.is23_234(), check.Equals, true)
 			c.Check(t.isBalanced(), check.Equals, true)
-			if c.Failed() {
+			if printTrees && c.Failed() {
 				c.Log(describeTree((*Node)(t), false, true))
 			}
 		}
@@ -327,7 +329,7 @@ func (s *S) TestDeleteMinMax(c *check.C) {
 		c.Check(t.isBST(), check.Equals, true)
 		c.Check(t.is23_234(), check.Equals, true)
 		c.Check(t.isBalanced(), check.Equals, true)
-		if c.Failed() {
+		if printTrees && c.Failed() {
 			c.Log(describeTree((*Node)(t), false, true))
 		}
 	}
@@ -347,7 +349,7 @@ func (s *S) TestRandomInsertionDeletion(c *check.C) {
 		c.Check(t.is23_234(), check.Equals, true)
 		c.Check(t.isBalanced(), check.Equals, true)
 	}
-	if c.Failed() {
+	if printTrees && c.Failed() {
 		c.Log(describeTree((*Node)(t), false, true))
 	}
 }
