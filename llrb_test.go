@@ -135,9 +135,14 @@ func makeTree(desc string) (n *Node) {
 				continue
 			}
 			if b == ')' {
+				if cn.Left == nil && cn.Right == nil {
+					return nil, i
+				}
 				continue
 			}
-			cn.Elem = compRune(b)
+			if b != ';' {
+				cn.Elem = compRune(b)
+			}
 			return cn, i
 		}
 
@@ -145,6 +150,9 @@ func makeTree(desc string) (n *Node) {
 	}
 
 	n, _ = build([]rune(desc))
+	if n.Left == nil && n.Right == nil {
+		n = nil
+	}
 
 	return
 }
@@ -182,7 +190,11 @@ func describeTree(n *Node, char, color bool) string {
 			}
 		}
 	}
-	follow(n)
+	if n == nil {
+		s = []rune("()")
+	} else {
+		follow(n)
+	}
 	s = append(s, ';')
 
 	return string(s)
@@ -196,9 +208,15 @@ type S struct{}
 var _ = check.Suite(&S{})
 
 func (s *S) TestMakeAndDescribeTree(c *check.C) {
-	desc := "((a,c)b,(e,g)f)d;"
-	tree := makeTree(desc)
-	c.Check(describeTree(tree, true, false), check.DeepEquals, desc)
+	c.Check(describeTree((*Node)(nil), true, false), check.DeepEquals, "();")
+	for _, desc := range []string{
+		"();",
+		"((a,c)b,(e,g)f)d;",
+	} {
+		t := makeTree(desc)
+		c.Logf("%#v", t)
+		c.Check(describeTree(t, true, false), check.DeepEquals, desc)
+	}
 }
 
 // ((a,c)b,(e,g)f)d -rotL-> (((a,c)b,e)d,g)f
