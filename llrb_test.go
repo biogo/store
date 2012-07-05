@@ -22,7 +22,12 @@ import (
 	"testing"
 )
 
-const printTrees = false
+const (
+	none = iota
+	first
+	all
+	printTrees = first
+)
 
 // Integrity checks - translated from http://www.cs.princeton.edu/~rs/talks/LLRB/Java/RedBlackBST.java
 
@@ -214,7 +219,6 @@ func (s *S) TestMakeAndDescribeTree(c *check.C) {
 		"((a,c)b,(e,g)f)d;",
 	} {
 		t := makeTree(desc)
-		c.Logf("%#v", t)
 		c.Check(describeTree(t, true, false), check.DeepEquals, desc)
 	}
 }
@@ -258,16 +262,19 @@ func (s *S) TestNilOperations(c *check.C) {
 }
 
 func (s *S) TestInsertion(c *check.C) {
+	printed := false
 	min, max := compRune(0), compRune(1000)
 	for _, t := range []*Tree{nil, {}} {
 		for i := min; i <= max; i++ {
 			t = t.Insert(i)
-			c.Check(t.isBST(), check.Equals, true)
-			c.Check(t.is23_234(), check.Equals, true)
-			c.Check(t.isBalanced(), check.Equals, true)
-		}
-		if printTrees && c.Failed() {
-			c.Log(describeTree((*Node)(t), false, true))
+			failed := false
+			failed = failed || !c.Check(t.isBST(), check.Equals, true)
+			failed = failed || !c.Check(t.is23_234(), check.Equals, true)
+			failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+			if failed && (printTrees > none && !printed) || printTrees == all {
+				printed = true
+				c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
+			}
 		}
 		c.Check(t.Min(), check.Equals, compRune(min))
 		c.Check(t.Max(), check.Equals, compRune(max))
@@ -275,6 +282,7 @@ func (s *S) TestInsertion(c *check.C) {
 }
 
 func (s *S) TestDeletion(c *check.C) {
+	printed := false
 	min, max := compRune(0), compRune(10000)
 	for _, t := range []*Tree{nil, {}} {
 		for i := min; i <= max; i++ {
@@ -283,11 +291,13 @@ func (s *S) TestDeletion(c *check.C) {
 		for i := min; i <= max; i++ {
 			t = t.Delete(i)
 			if i < max {
-				c.Check(t.isBST(), check.Equals, true)
-				c.Check(t.is23_234(), check.Equals, true)
-				c.Check(t.isBalanced(), check.Equals, true)
-				if printTrees && c.Failed() {
-					c.Log(describeTree((*Node)(t), false, true))
+				failed := false
+				failed = failed || !c.Check(t.isBST(), check.Equals, true)
+				failed = failed || !c.Check(t.is23_234(), check.Equals, true)
+				failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+				if failed && (printTrees > none && !printed) || printTrees == all {
+					printed = true
+					c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
 				}
 			}
 		}
@@ -296,20 +306,24 @@ func (s *S) TestDeletion(c *check.C) {
 }
 
 func (s *S) TestRandomInsertion(c *check.C) {
+	printed := false
 	count, max := 100000, 1000
 	var t *Tree
 	for i := 0; i < count; i++ {
 		t = t.Insert(compRune(rand.Intn(max)))
-		c.Check(t.isBST(), check.Equals, true)
-		c.Check(t.is23_234(), check.Equals, true)
-		c.Check(t.isBalanced(), check.Equals, true)
-	}
-	if printTrees && c.Failed() {
-		c.Log(describeTree((*Node)(t), false, true))
+		failed := false
+		failed = failed || !c.Check(t.isBST(), check.Equals, true)
+		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
+		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+		if failed && (printTrees > none && !printed) || printTrees == all {
+			printed = true
+			c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
+		}
 	}
 }
 
 func (s *S) TestRandomDeletion(c *check.C) {
+	printed := false
 	count, max := 100000, 1000
 	r := make([]compRune, count)
 	var t *Tree
@@ -320,11 +334,13 @@ func (s *S) TestRandomDeletion(c *check.C) {
 	for _, v := range r {
 		t = t.Delete(v)
 		if t != nil {
-			c.Check(t.isBST(), check.Equals, true)
-			c.Check(t.is23_234(), check.Equals, true)
-			c.Check(t.isBalanced(), check.Equals, true)
-			if printTrees && c.Failed() {
-				c.Log(describeTree((*Node)(t), false, true))
+			failed := false
+			failed = failed || !c.Check(t.isBST(), check.Equals, true)
+			failed = failed || !c.Check(t.is23_234(), check.Equals, true)
+			failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+			if failed && (printTrees > none && !printed) || printTrees == all {
+				printed = true
+				c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
 			}
 		}
 	}
@@ -332,44 +348,85 @@ func (s *S) TestRandomDeletion(c *check.C) {
 }
 
 func (s *S) TestDeleteMinMax(c *check.C) {
+	printed := false
 	min, max := compRune(0), compRune(10000)
 	var t *Tree
 	for i := min; i <= max; i++ {
 		t = t.Insert(i)
 	}
 	for i, m := 0, int(max); i < m/2; i++ {
+		failed := false
 		t = t.DeleteMin()
 		min++
-		c.Check(t.Min(), check.Equals, min)
+		failed = failed || !c.Check(t.Min(), check.Equals, min)
 		t = t.DeleteMax()
 		max--
-		c.Check(t.Max(), check.Equals, max)
-		c.Check(t.isBST(), check.Equals, true)
-		c.Check(t.is23_234(), check.Equals, true)
-		c.Check(t.isBalanced(), check.Equals, true)
-		if printTrees && c.Failed() {
-			c.Log(describeTree((*Node)(t), false, true))
+		failed = failed || !c.Check(t.Max(), check.Equals, max)
+		failed = failed || !c.Check(t.isBST(), check.Equals, true)
+		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
+		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+		if failed && (printTrees > none && !printed) || printTrees == all {
+			printed = true
+			c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
 		}
 	}
 }
 
 func (s *S) TestRandomInsertionDeletion(c *check.C) {
+	printed := false
 	count, max := 100000, 1000
 	var t *Tree
 	for i := 0; i < count; i++ {
+		failed := false
 		if rand.Float64() < 0.5 {
 			t = t.Insert(compRune(rand.Intn(max)))
 		}
 		if rand.Float64() < 0.5 {
 			t = t.Delete(compRune(rand.Intn(max)))
 		}
-		c.Check(t.isBST(), check.Equals, true)
-		c.Check(t.is23_234(), check.Equals, true)
-		c.Check(t.isBalanced(), check.Equals, true)
+		failed = failed || !c.Check(t.isBST(), check.Equals, true)
+		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
+		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+		if failed && (printTrees > none && !printed) || printTrees == all {
+			printed = true
+			c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
+		}
 	}
-	if printTrees && c.Failed() {
-		c.Log(describeTree((*Node)(t), false, true))
+}
+
+func (s *S) TestDeleteRight(c *check.C) {
+	type target struct {
+		min, max, target compRune
 	}
+	for _, r := range []target{
+		{0, 14, 14},
+		{0, 15, 15},
+		{0, 16, 15},
+		{0, 16, 16},
+		{0, 17, 16},
+		{0, 17, 17},
+	} {
+		var (
+			t      *Tree
+			format string
+		)
+		for i := r.min; i <= r.max; i++ {
+			t = t.Insert(i)
+		}
+		before := describeTree((*Node)(t), false, true)
+		format = "Before deletion: %#v %s"
+		checkTree(t, c, format, r, before)
+		t = t.Delete(r.target)
+		format = "%#v\nBefore deletion: %s\nAfter deletion:  %s"
+		checkTree(t, c, format, r, before, describeTree((*Node)(t), false, true))
+	}
+}
+
+func checkTree(t *Tree, c *check.C, f string, i ...interface{}) {
+	comm := check.Commentf(f, i...)
+	c.Check(t.isBST(), check.Equals, true, comm)
+	c.Check(t.is23_234(), check.Equals, true, comm)
+	c.Check(t.isBalanced(), check.Equals, true, comm)
 }
 
 // Benchmarks
