@@ -16,9 +16,11 @@
 package llrb
 
 import (
+	"flag"
 	"fmt"
 	check "launchpad.net/gocheck"
 	"math/rand"
+	"os"
 	"strings"
 	"testing"
 	"unsafe"
@@ -29,8 +31,9 @@ const (
 	first
 	all
 	printTrees = first
-	genDot     = false // Generate a dot code for TestDeleteRight
 )
+
+var genDot = flag.Bool("dot", false, "Generate dot code for TestDeleteRight trees.")
 
 // Integrity checks - translated from http://www.cs.princeton.edu/~rs/talks/LLRB/Java/RedBlackBST.java
 
@@ -397,6 +400,11 @@ func (s *S) TestRandomInsertionDeletion(c *check.C) {
 	}
 }
 
+var (
+	modeName = []string{TD234: "TD234", BU23: "BU23"}
+	arrows   = map[Color]string{Red: "none", Black: "normal"}
+)
+
 func (s *S) TestDeleteRight(c *check.C) {
 	type target struct {
 		min, max, target compRune
@@ -419,14 +427,20 @@ func (s *S) TestDeleteRight(c *check.C) {
 		before := describeTree((*Node)(t), false, true)
 		format = "Before deletion: %#v %s"
 		checkTree(t, c, format, r, before)
-		if genDot {
-			c.Log(dot(t, fmt.Sprintf("before_%d_%d_%d", r.min, r.max, r.target)))
+		if *genDot {
+			err := dot(t, fmt.Sprintf("%s_before_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target))
+			if err != nil {
+				c.Errorf("Dot file write failed: %v", err)
+			}
 		}
 		t = t.Delete(r.target)
 		format = "%#v\nBefore deletion: %s\nAfter deletion:  %s"
 		checkTree(t, c, format, r, before, describeTree((*Node)(t), false, true))
-		if genDot {
-			c.Log(dot(t, fmt.Sprintf("after_%d_%d_%d", r.min, r.max, r.target)))
+		if *genDot {
+			err := dot(t, fmt.Sprintf("%s_after_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target))
+			if err != nil {
+				c.Errorf("Dot file write failed: %v", err)
+			}
 		}
 	}
 }
@@ -438,11 +452,9 @@ func checkTree(t *Tree, c *check.C, f string, i ...interface{}) {
 	c.Check(t.isBalanced(), check.Equals, true, comm)
 }
 
-var arrows = map[Color]string{Red: "none", Black: "normal"}
-
-func dot(t *Tree, label string) string {
+func dot(t *Tree, label string) (err error) {
 	if t == nil {
-		return ""
+		return
 	}
 	var (
 		s      []string
@@ -455,22 +467,28 @@ func dot(t *Tree, label string) string {
 		id := uintptr(unsafe.Pointer(n))
 		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> %d|<Right>\"];", id, n.Elem)
 		if n.Left != nil {
-			c += fmt.Sprintf(" edge [color=%v,arrowhead=%s]; \"%d\":Left -> \"%d\":Elem;",
+			c += fmt.Sprintf("\n\t\tedge [color=%v,arrowhead=%s]; \"%d\":Left -> \"%d\":Elem;",
 				n.Left.color(), arrows[n.Left.color()], id, uintptr(unsafe.Pointer(n.Left)))
 			follow(n.Left)
 		}
 		if n.Right != nil {
-			c += fmt.Sprintf(" edge [color=%v,arrowhead=%s]; \"%d\":Right -> \"%d\":Elem;",
+			c += fmt.Sprintf("\n\t\tedge [color=%v,arrowhead=%s]; \"%d\":Right -> \"%d\":Elem;",
 				n.Right.color(), arrows[n.Right.color()], id, uintptr(unsafe.Pointer(n.Right)))
 			follow(n.Right)
 		}
 		s = append(s, c)
 	}
 	follow((*Node)(t))
-	return fmt.Sprintf("digraph %s {\nnode [shape=record,height=0.1];\n\t%s\n}\n",
+	f, err := os.Create(label + ".dot")
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	fmt.Fprintf(f, "digraph %s {\n\tnode [shape=record,height=0.1];\n\t%s\n}\n",
 		label,
 		strings.Join(s, "\n\t"),
 	)
+	return
 }
 
 // Benchmarks
