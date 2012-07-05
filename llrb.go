@@ -277,6 +277,9 @@ func (self *Node) deleteMax() *Node {
 
 // Delete deletes the first node found that matches e according to Compare().
 func (self *Tree) Delete(e Comparable) (root *Tree) {
+	if self == nil {
+		return
+	}
 	root = (*Tree)((*Node)(self).delete(e))
 	if root == nil {
 		return
@@ -286,14 +289,13 @@ func (self *Tree) Delete(e Comparable) (root *Tree) {
 }
 
 func (self *Node) delete(e Comparable) (root *Node) {
-	if self == nil {
-		return
-	}
 	if e.Compare(self.Elem) < 0 {
-		if self.Left.color() == Black && self.Left != nil && self.Left.Left.color() == Black {
-			self = self.moveRedLeft()
+		if self.Left != nil {
+			if self.Left.color() == Black && self.Left.Left.color() == Black {
+				self = self.moveRedLeft()
+			}
+			self.Left = self.Left.delete(e)
 		}
-		self.Left = self.Left.delete(e)
 	} else {
 		if self.Left.color() == Red {
 			self = self.rotateRight()
@@ -301,14 +303,16 @@ func (self *Node) delete(e Comparable) (root *Node) {
 		if e.Compare(self.Elem) == 0 && self.Right == nil {
 			return nil
 		}
-		if self.Right.color() == Black && self.Right != nil && self.Right.Left.color() == Black {
-			self = self.moveRedRight()
-		}
-		if e.Compare(self.Elem) == 0 {
-			self.Elem = self.Right.min().Elem
-			self.Right = self.Right.deleteMin()
-		} else {
-			self.Right = self.Right.delete(e)
+		if self.Right != nil {
+			if self.Right.color() == Black && self.Right.Left.color() == Black {
+				self = self.moveRedRight()
+			}
+			if e.Compare(self.Elem) == 0 {
+				self.Elem = self.Right.min().Elem
+				self.Right = self.Right.deleteMin()
+			} else {
+				self.Right = self.Right.delete(e)
+			}
 		}
 	}
 	return self.fixUp()
