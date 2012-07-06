@@ -311,6 +311,48 @@ func (s *S) TestDeletion(c *check.C) {
 	}
 }
 
+func (s *S) TestGet(c *check.C) {
+	min, max := compRune(0), compRune(100000)
+	for _, t := range []*Tree{nil, {}} {
+		for i := min; i <= max; i++ {
+			if i&1 == 0 {
+				t = t.Insert(i)
+			}
+		}
+		for i := min; i <= max; i++ {
+			if i&1 == 0 {
+				c.Check(t.Get(i), check.DeepEquals, compRune(i)) // Check inserted elements are present.
+			} else {
+				c.Check(t.Get(i), check.Equals, Comparable(nil)) // Check inserted elements are absent.
+			}
+		}
+	}
+}
+
+func (s *S) TestRandomlyInsertedGet(c *check.C) {
+	count, max := 100000, 1000
+	for _, t := range []*Tree{nil, {}} {
+		verify := map[rune]struct{}{}
+		for i := 0; i < count; i++ {
+			v := compRune(rand.Intn(max))
+			t = t.Insert(v)
+			verify[rune(v)] = struct{}{}
+		}
+		// Random fetch order - check only those inserted.
+		for v := range verify {
+			c.Check(t.Get(compRune(v)), check.DeepEquals, compRune(v)) // Check inserted elements are present.
+		}
+		// Check all possible insertions.
+		for i := compRune(0); i <= compRune(max); i++ {
+			if _, ok := verify[rune(i)]; ok {
+				c.Check(t.Get(i), check.DeepEquals, compRune(i)) // Check inserted elements are present.
+			} else {
+				c.Check(t.Get(i), check.Equals, Comparable(nil)) // Check inserted elements are absent.
+			}
+		}
+	}
+}
+
 func (s *S) TestRandomInsertion(c *check.C) {
 	printed := false
 	count, max := 100000, 1000
@@ -520,6 +562,18 @@ func BenchmarkInsertNoRep(b *testing.B) {
 	var t *Tree
 	for i := 0; i < b.N; i++ {
 		t = t.Insert(compIntNoRep(b.N - i))
+	}
+}
+
+func BenchmarkGet(b *testing.B) {
+	b.StopTimer()
+	var t *Tree
+	for i := 0; i < b.N; i++ {
+		t = t.Insert(compInt(b.N - i))
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		t.Get(compInt(i))
 	}
 }
 
