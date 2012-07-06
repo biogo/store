@@ -650,3 +650,38 @@ func BenchmarkDeleteMin(b *testing.B) {
 		t, _ = t.DeleteMin()
 	}
 }
+
+// Benchmarks for comparison to the built-in type.
+
+func BenchmarkInsertMap(b *testing.B) {
+	var m = map[int]struct{}{}
+	for i := 0; i < b.N; i++ {
+		m[i] = struct{}{}
+	}
+}
+
+func BenchmarkGetMap(b *testing.B) {
+	b.StopTimer()
+	var m = map[int]struct{}{}
+	for i := 0; i < b.N; i++ {
+		m[i] = struct{}{}
+	}
+	b.StartTimer()
+	var r struct{}
+	for i := 0; i < b.N; i++ {
+		r = m[i]
+	}
+	_ = r
+}
+
+func BenchmarkDeleteMap(b *testing.B) {
+	b.StopTimer()
+	var m = map[int]struct{}{}
+	for i := 0; i < b.N; i++ {
+		m[i] = struct{}{}
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		delete(m, i)
+	}
+}
