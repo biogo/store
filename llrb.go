@@ -177,18 +177,19 @@ func (self *Node) search(q Comparable) (n *Node) {
 // specified by ensuring that e.Compare() never returns 0. If insert without
 // replacement is performed, a distinct query Comparable must be used that
 // can return 0 with a Compare() call.
-func (self *Tree) Insert(e Comparable) (root *Tree) {
-	root = (*Tree)((*Node)(self).insert(e))
+func (self *Tree) Insert(e Comparable) (root *Tree, d int) {
+	r, d := (*Node)(self).insert(e)
+	root = (*Tree)(r)
 	root.Color = Black
 	return
 }
 
-func (self *Node) insert(e Comparable) (root *Node) {
+func (self *Node) insert(e Comparable) (root *Node, d int) {
 	if self == nil {
-		return &Node{Elem: e}
+		return &Node{Elem: e}, 1
 	} else if self.Elem == nil {
 		self.Elem = e
-		return self
+		return self, 1
 	}
 
 	if Mode == TD234 {
@@ -201,9 +202,9 @@ func (self *Node) insert(e Comparable) (root *Node) {
 	case c == 0:
 		self.Elem = e
 	case c < 0:
-		self.Left = self.Left.insert(e)
+		self.Left, d = self.Left.insert(e)
 	default:
-		self.Right = self.Right.insert(e)
+		self.Right, d = self.Right.insert(e)
 	}
 
 	if self.Right.color() == Red && self.Left.color() == Black {
@@ -219,89 +220,92 @@ func (self *Node) insert(e Comparable) (root *Node) {
 		}
 	}
 
-	return self
+	return self, d
 }
 
 // DeleteMin deletes the node with the minimum value in the tree. If insertion without
 // replacement has been used the the left-most minimum will be deleted.
-func (self *Tree) DeleteMin() (root *Tree) {
+func (self *Tree) DeleteMin() (root *Tree, d int) {
 	if self == nil {
 		return
 	}
-	root = (*Tree)((*Node)(self).deleteMin())
-	if root == nil {
+	r, d := (*Node)(self).deleteMin()
+	if r == nil {
 		return
 	}
+	root = (*Tree)(r)
 	root.Color = Black
 	return
 }
 
-func (self *Node) deleteMin() *Node {
+func (self *Node) deleteMin() (root *Node, d int) {
 	if self.Left == nil {
-		return nil
+		return nil, -1
 	}
 	if self.Left.color() == Black && self.Left.Left.color() == Black {
 		self = self.moveRedLeft()
 	}
-	self.Left = self.Left.deleteMin()
-	return self.fixUp()
+	self.Left, d = self.Left.deleteMin()
+	return self.fixUp(), d
 }
 
 // DeleteMax deletes the node with the maximum value in the tree. If insertion without
 // replacement has been used the the right-most maximum will be deleted.
-func (self *Tree) DeleteMax() (root *Tree) {
+func (self *Tree) DeleteMax() (root *Tree, d int) {
 	if self == nil {
 		return
 	}
-	root = (*Tree)((*Node)(self).deleteMax())
-	if root == nil {
+	r, d := (*Node)(self).deleteMax()
+	if r == nil {
 		return
 	}
+	root = (*Tree)(r)
 	root.Color = Black
 	return
 }
 
-func (self *Node) deleteMax() *Node {
+func (self *Node) deleteMax() (root *Node, d int) {
 	if self.Left != nil && self.Left.color() == Red {
 		self = self.rotateRight()
 	}
 	if self.Right == nil {
-		return nil
+		return nil, -1
 	}
 	if self.Right.color() == Black && self.Right.Left.color() == Black {
 		self = self.moveRedRight()
 	}
-	self.Right = self.Right.deleteMax()
-	return self.fixUp()
+	self.Right, d = self.Right.deleteMax()
+	return self.fixUp(), d
 }
 
 // Delete deletes the first node found that matches e according to Compare().
-func (self *Tree) Delete(e Comparable) (root *Tree) {
+func (self *Tree) Delete(e Comparable) (root *Tree, d int) {
 	if self == nil {
 		return
 	}
-	root = (*Tree)((*Node)(self).delete(e))
-	if root == nil {
+	r, d := (*Node)(self).delete(e)
+	if r == nil {
 		return
 	}
+	root = (*Tree)(r)
 	root.Color = Black
 	return
 }
 
-func (self *Node) delete(e Comparable) (root *Node) {
+func (self *Node) delete(e Comparable) (root *Node, d int) {
 	if e.Compare(self.Elem) < 0 {
 		if self.Left != nil {
 			if self.Left.color() == Black && self.Left.Left.color() == Black {
 				self = self.moveRedLeft()
 			}
-			self.Left = self.Left.delete(e)
+			self.Left, d = self.Left.delete(e)
 		}
 	} else {
 		if self.Left.color() == Red {
 			self = self.rotateRight()
 		}
 		if e.Compare(self.Elem) == 0 && self.Right == nil {
-			return nil
+			return nil, -1
 		}
 		if self.Right != nil {
 			if self.Right.color() == Black && self.Right.Left.color() == Black {
@@ -309,13 +313,13 @@ func (self *Node) delete(e Comparable) (root *Node) {
 			}
 			if e.Compare(self.Elem) == 0 {
 				self.Elem = self.Right.min().Elem
-				self.Right = self.Right.deleteMin()
+				self.Right, d = self.Right.deleteMin()
 			} else {
-				self.Right = self.Right.delete(e)
+				self.Right, d = self.Right.delete(e)
 			}
 		}
 	}
-	return self.fixUp()
+	return self.fixUp(), d
 }
 
 // Return the minimum value stored in the tree. This will be the left-most minimum value if

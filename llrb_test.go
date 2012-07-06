@@ -257,22 +257,27 @@ func (s *S) TestRotateRight(c *check.C) {
 	c.Check(tree, check.DeepEquals, rotTree)
 }
 
+func filterDiff(t *Tree, _ int) *Tree { return t }
 func (s *S) TestNilOperations(c *check.C) {
 	var e *Tree
 	for _, t := range []*Tree{nil, {}} {
 		c.Check(t.Min(), check.Equals, nil)
 		c.Check(t.Max(), check.Equals, nil)
-		c.Check(t.DeleteMin(), check.Equals, e)
-		c.Check(t.DeleteMax(), check.Equals, e)
+		c.Check(filterDiff(t.DeleteMin()), check.Equals, e)
+		c.Check(filterDiff(t.DeleteMax()), check.Equals, e)
 	}
 }
 
 func (s *S) TestInsertion(c *check.C) {
-	printed := false
-	min, max := compRune(0), compRune(1000)
+	var (
+		printed  = false
+		min, max = compRune(0), compRune(1000)
+		d        int
+	)
 	for _, t := range []*Tree{nil, {}} {
 		for i := min; i <= max; i++ {
-			t = t.Insert(i)
+			t, d = t.Insert(i)
+			c.Check(d, check.Equals, 1)
 			failed := false
 			failed = failed || !c.Check(t.isBST(), check.Equals, true)
 			failed = failed || !c.Check(t.is23_234(), check.Equals, true)
@@ -288,14 +293,23 @@ func (s *S) TestInsertion(c *check.C) {
 }
 
 func (s *S) TestDeletion(c *check.C) {
-	printed := false
-	min, max := compRune(0), compRune(10000)
+	var (
+		printed  = false
+		min, max = compRune(0), compRune(10000)
+		d, e     int
+	)
 	for _, t := range []*Tree{nil, {}} {
 		for i := min; i <= max; i++ {
-			t = t.Insert(i)
+			t, _ = t.Insert(i)
 		}
 		for i := min; i <= max; i++ {
-			t = t.Delete(i)
+			if t.Get(i) != nil {
+				e = -1
+			} else {
+				e = 0
+			}
+			t, d = t.Delete(i)
+			c.Check(d, check.Equals, e)
 			if i < max {
 				failed := false
 				failed = failed || !c.Check(t.isBST(), check.Equals, true)
@@ -316,7 +330,7 @@ func (s *S) TestGet(c *check.C) {
 	for _, t := range []*Tree{nil, {}} {
 		for i := min; i <= max; i++ {
 			if i&1 == 0 {
-				t = t.Insert(i)
+				t, _ = t.Insert(i)
 			}
 		}
 		for i := min; i <= max; i++ {
@@ -335,7 +349,7 @@ func (s *S) TestRandomlyInsertedGet(c *check.C) {
 		verify := map[rune]struct{}{}
 		for i := 0; i < count; i++ {
 			v := compRune(rand.Intn(max))
-			t = t.Insert(v)
+			t, _ = t.Insert(v)
 			verify[rune(v)] = struct{}{}
 		}
 		// Random fetch order - check only those inserted.
@@ -354,11 +368,13 @@ func (s *S) TestRandomlyInsertedGet(c *check.C) {
 }
 
 func (s *S) TestRandomInsertion(c *check.C) {
-	printed := false
-	count, max := 100000, 1000
-	var t *Tree
+	var (
+		printed    bool
+		count, max = 100000, 1000
+		t          *Tree
+	)
 	for i := 0; i < count; i++ {
-		t = t.Insert(compRune(rand.Intn(max)))
+		t, _ = t.Insert(compRune(rand.Intn(max)))
 		failed := false
 		failed = failed || !c.Check(t.isBST(), check.Equals, true)
 		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
@@ -371,16 +387,18 @@ func (s *S) TestRandomInsertion(c *check.C) {
 }
 
 func (s *S) TestRandomDeletion(c *check.C) {
-	printed := false
-	count, max := 100000, 1000
-	r := make([]compRune, count)
-	var t *Tree
+	var (
+		printed    bool
+		count, max = 100000, 1000
+		r          = make([]compRune, count)
+		t          *Tree
+	)
 	for i := range r {
 		r[i] = compRune(rand.Intn(max))
-		t = t.Insert(r[i])
+		t, _ = t.Insert(r[i])
 	}
 	for _, v := range r {
-		t = t.Delete(v)
+		t, _ = t.Delete(v)
 		if t != nil {
 			failed := false
 			failed = failed || !c.Check(t.isBST(), check.Equals, true)
@@ -396,18 +414,25 @@ func (s *S) TestRandomDeletion(c *check.C) {
 }
 
 func (s *S) TestDeleteMinMax(c *check.C) {
-	printed := false
-	min, max := compRune(0), compRune(10000)
-	var t *Tree
+	var (
+		printed  bool
+		min, max = compRune(0), compRune(10)
+		t        *Tree
+		d, dI    int
+	)
 	for i := min; i <= max; i++ {
-		t = t.Insert(i)
+		t, d = t.Insert(i)
+		dI += d
 	}
+	c.Check(dI, check.Equals, int(max-min+1))
 	for i, m := 0, int(max); i < m/2; i++ {
 		failed := false
-		t = t.DeleteMin()
+		t, d = t.DeleteMin()
+		c.Check(d, check.Equals, -1)
 		min++
 		failed = failed || !c.Check(t.Min(), check.Equals, min)
-		t = t.DeleteMax()
+		t, d = t.DeleteMax()
+		c.Check(d, check.Equals, -1)
 		max--
 		failed = failed || !c.Check(t.Max(), check.Equals, max)
 		failed = failed || !c.Check(t.isBST(), check.Equals, true)
@@ -421,17 +446,39 @@ func (s *S) TestDeleteMinMax(c *check.C) {
 }
 
 func (s *S) TestRandomInsertionDeletion(c *check.C) {
-	printed := false
-	count, max := 100000, 1000
-	var t *Tree
+	var (
+		printed    bool
+		count, max = 100000, 1000
+		t          *Tree
+		dI, dD     int
+		verify     = map[int]struct{}{}
+	)
 	for i := 0; i < count; i++ {
+		var d, e int
+		if rand.Float64() < 0.5 {
+			r := rand.Intn(max)
+			if _, ok := verify[r]; ok {
+				e = 0
+			} else {
+				e = 1
+			}
+			t, d = t.Insert(compRune(r))
+			verify[r] = struct{}{}
+			c.Check(d, check.Equals, e)
+			dI += d
+		}
+		if rand.Float64() < 0.5 {
+			r := rand.Intn(max)
+			if _, ok := verify[r]; ok {
+				e = -1
+			} else {
+				e = 0
+			}
+			t, d = t.Delete(compRune(r))
+			delete(verify, r)
+			dD += d
+		}
 		failed := false
-		if rand.Float64() < 0.5 {
-			t = t.Insert(compRune(rand.Intn(max)))
-		}
-		if rand.Float64() < 0.5 {
-			t = t.Delete(compRune(rand.Intn(max)))
-		}
 		failed = failed || !c.Check(t.isBST(), check.Equals, true)
 		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
@@ -440,6 +487,7 @@ func (s *S) TestRandomInsertionDeletion(c *check.C) {
 			c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
 		}
 	}
+	c.Check(dI+dD, check.Equals, len(verify), check.Commentf("Insertions: %d Deletions: %d", dI, -dD))
 }
 
 var (
@@ -451,6 +499,7 @@ func (s *S) TestDeleteRight(c *check.C) {
 	type target struct {
 		min, max, target compRune
 	}
+	var d int
 	for _, r := range []target{
 		{0, 14, 14},
 		{0, 15, 15},
@@ -464,7 +513,7 @@ func (s *S) TestDeleteRight(c *check.C) {
 			format string
 		)
 		for i := r.min; i <= r.max; i++ {
-			t = t.Insert(i)
+			t, _ = t.Insert(i)
 		}
 		before := describeTree((*Node)(t), false, true)
 		format = "Before deletion: %#v %s"
@@ -475,7 +524,8 @@ func (s *S) TestDeleteRight(c *check.C) {
 				c.Errorf("Dot file write failed: %v", err)
 			}
 		}
-		t = t.Delete(r.target)
+		t, d = t.Delete(r.target)
+		c.Check(d, check.Equals, -1)
 		format = "%#v\nBefore deletion: %s\nAfter deletion:  %s"
 		checkTree(t, c, format, r, before, describeTree((*Node)(t), false, true))
 		if *genDot {
@@ -554,14 +604,14 @@ func (ci compIntNoRep) Compare(i Comparable) int {
 func BenchmarkInsert(b *testing.B) {
 	var t *Tree
 	for i := 0; i < b.N; i++ {
-		t = t.Insert(compInt(b.N - i))
+		t, _ = t.Insert(compInt(b.N - i))
 	}
 }
 
 func BenchmarkInsertNoRep(b *testing.B) {
 	var t *Tree
 	for i := 0; i < b.N; i++ {
-		t = t.Insert(compIntNoRep(b.N - i))
+		t, _ = t.Insert(compIntNoRep(b.N - i))
 	}
 }
 
@@ -569,7 +619,7 @@ func BenchmarkGet(b *testing.B) {
 	b.StopTimer()
 	var t *Tree
 	for i := 0; i < b.N; i++ {
-		t = t.Insert(compInt(b.N - i))
+		t, _ = t.Insert(compInt(b.N - i))
 	}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -581,11 +631,11 @@ func BenchmarkDelete(b *testing.B) {
 	b.StopTimer()
 	var t *Tree
 	for i := 0; i < b.N; i++ {
-		t = t.Insert(compInt(b.N - i))
+		t, _ = t.Insert(compInt(b.N - i))
 	}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		t = t.Delete(compInt(i))
+		t, _ = t.Delete(compInt(i))
 	}
 }
 
@@ -593,10 +643,10 @@ func BenchmarkDeleteMin(b *testing.B) {
 	b.StopTimer()
 	var t *Tree
 	for i := 0; i < b.N; i++ {
-		t = t.Insert(compInt(b.N - i))
+		t, _ = t.Insert(compInt(b.N - i))
 	}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		t = t.DeleteMin()
+		t, _ = t.DeleteMin()
 	}
 }
