@@ -66,8 +66,11 @@ type Node struct {
 	Color       Color
 }
 
-// A Tree represent the root node of an LLRB tree. Public methods are exposed through this type.
-type Tree Node
+// A Tree manages the root node of an LLRB tree. Public methods are exposed through this type.
+type Tree struct {
+	Root  *Node // Root node of the tree.
+	Count int   // Number of elements stored.
+}
 
 // Helper methods
 
@@ -146,14 +149,19 @@ func (self *Node) moveRedRight() *Node {
 // Get returns the first match of q in the Tree. If insertion without
 // replacement is used, this is probably not what you want.
 func (self *Tree) Get(q Comparable) Comparable {
-	if self == nil {
+	if self.Root == nil {
 		return nil
 	}
-	n := (*Node)(self).search(q)
+	n := self.Root.search(q)
 	if n == nil {
 		return nil
 	}
 	return n.Elem
+}
+
+// Len returns the number of elements stored in the Tree.
+func (self *Tree) Len() int {
+	return self.Count
 }
 
 func (self *Node) search(q Comparable) (n *Node) {
@@ -177,11 +185,11 @@ func (self *Node) search(q Comparable) (n *Node) {
 // specified by ensuring that e.Compare() never returns 0. If insert without
 // replacement is performed, a distinct query Comparable must be used that
 // can return 0 with a Compare() call.
-func (self *Tree) Insert(e Comparable) (root *Tree, d int) {
-	r, d := (*Node)(self).insert(e)
-	root = (*Tree)(r)
-	root.Color = Black
-	return
+func (self *Tree) Insert(e Comparable) {
+	var d int
+	self.Root, d = self.Root.insert(e)
+	self.Count += d
+	self.Root.Color = Black
 }
 
 func (self *Node) insert(e Comparable) (root *Node, d int) {
@@ -225,17 +233,17 @@ func (self *Node) insert(e Comparable) (root *Node, d int) {
 
 // DeleteMin deletes the node with the minimum value in the tree. If insertion without
 // replacement has been used the the left-most minimum will be deleted.
-func (self *Tree) DeleteMin() (root *Tree, d int) {
-	if self == nil {
+func (self *Tree) DeleteMin() {
+	if self.Root == nil {
 		return
 	}
-	r, d := (*Node)(self).deleteMin()
-	if r == nil {
+	var d int
+	self.Root, d = self.Root.deleteMin()
+	self.Count += d
+	if self.Root == nil {
 		return
 	}
-	root = (*Tree)(r)
-	root.Color = Black
-	return
+	self.Root.Color = Black
 }
 
 func (self *Node) deleteMin() (root *Node, d int) {
@@ -251,17 +259,17 @@ func (self *Node) deleteMin() (root *Node, d int) {
 
 // DeleteMax deletes the node with the maximum value in the tree. If insertion without
 // replacement has been used the the right-most maximum will be deleted.
-func (self *Tree) DeleteMax() (root *Tree, d int) {
-	if self == nil {
+func (self *Tree) DeleteMax() {
+	if self.Root == nil {
 		return
 	}
-	r, d := (*Node)(self).deleteMax()
-	if r == nil {
+	var d int
+	self.Root, d = self.Root.deleteMax()
+	self.Count += d
+	if self.Root == nil {
 		return
 	}
-	root = (*Tree)(r)
-	root.Color = Black
-	return
+	self.Root.Color = Black
 }
 
 func (self *Node) deleteMax() (root *Node, d int) {
@@ -279,17 +287,17 @@ func (self *Node) deleteMax() (root *Node, d int) {
 }
 
 // Delete deletes the first node found that matches e according to Compare().
-func (self *Tree) Delete(e Comparable) (root *Tree, d int) {
-	if self == nil {
+func (self *Tree) Delete(e Comparable) {
+	if self.Root == nil {
 		return
 	}
-	r, d := (*Node)(self).delete(e)
-	if r == nil {
+	var d int
+	self.Root, d = self.Root.delete(e)
+	self.Count += d
+	if self.Root == nil {
 		return
 	}
-	root = (*Tree)(r)
-	root.Color = Black
-	return
+	self.Root.Color = Black
 }
 
 func (self *Node) delete(e Comparable) (root *Node, d int) {
@@ -325,10 +333,10 @@ func (self *Node) delete(e Comparable) (root *Node, d int) {
 // Return the minimum value stored in the tree. This will be the left-most minimum value if
 // insertion without replacement has been used.
 func (self *Tree) Min() Comparable {
-	if self == nil {
+	if self.Root == nil {
 		return nil
 	}
-	return (*Node)(self).min().Elem
+	return self.Root.min().Elem
 }
 
 func (self *Node) min() *Node {
@@ -341,10 +349,10 @@ func (self *Node) min() *Node {
 // Return the maximum value stored in the tree. This will be the right-most maximum value if
 // insertion without replacement has been used.
 func (self *Tree) Max() Comparable {
-	if self == nil {
+	if self.Root == nil {
 		return nil
 	}
-	return (*Node)(self).max().Elem
+	return self.Root.max().Elem
 }
 
 func (self *Node) max() *Node {
@@ -360,16 +368,20 @@ type Operation func(Comparable)
 // Do performs fn on all values stored in the tree. If fn alters stored values, future tree
 // operation behaviors are undefined.
 func (self *Tree) Do(fn Operation) {
-	(*Node)(self).do(fn)
+	if self.Root == nil {
+		return
+	}
+	self.Root.do(fn)
 }
 
 func (self *Node) do(fn Operation) {
-	if self == nil {
-		return
+	if self.Left != nil {
+		self.Left.do(fn)
 	}
-	self.Left.do(fn)
 	fn(self.Elem)
-	self.Right.do(fn)
+	if self.Right != nil {
+		self.Right.do(fn)
+	}
 }
 
 // DoRange performs fn on all values stored in the tree between from and to. If from is
@@ -377,44 +389,41 @@ func (self *Node) do(fn Operation) {
 // to then the operations are performed from right to left. If fn alters stored values,
 // future tree operation behaviors are undefined.
 func (self *Tree) DoRange(fn Operation, from, to Comparable) {
+	if self.Root == nil {
+		return
+	}
 	switch order := from.Compare(to); {
 	case order < 0:
-		(*Node)(self).doRange(fn, from, to)
+		self.Root.doRange(fn, from, to)
 	case order > 0:
-		(*Node)(self).doRangeReverse(fn, from, to)
+		self.Root.doRangeReverse(fn, from, to)
 	default:
-		(*Node)(self).doMatch(fn, from)
+		self.Root.doMatch(fn, from)
 	}
 }
 
 func (self *Node) doRange(fn Operation, from, to Comparable) {
-	if self == nil {
-		return
-	}
 	fc, tc := from.Compare(self.Elem), to.Compare(self.Elem)
-	if fc <= 0 {
+	if fc <= 0 && self.Left != nil {
 		self.Left.doRange(fn, from, to)
 	}
 	if fc <= 0 && tc >= 0 {
 		fn(self.Elem)
 	}
-	if tc >= 0 {
+	if tc >= 0 && self.Right != nil {
 		self.Right.doRange(fn, from, to)
 	}
 }
 
 func (self *Node) doRangeReverse(fn Operation, from, to Comparable) {
-	if self == nil {
-		return
-	}
 	fc, tc := from.Compare(self.Elem), to.Compare(self.Elem)
-	if tc >= 0 {
+	if tc >= 0 && self.Right != nil {
 		self.Right.doRangeReverse(fn, from, to)
 	}
 	if fc <= 0 && tc >= 0 {
 		fn(self.Elem)
 	}
-	if fc <= 0 {
+	if fc <= 0 && self.Left != nil {
 		self.Left.doRangeReverse(fn, from, to)
 	}
 }
@@ -422,21 +431,21 @@ func (self *Node) doRangeReverse(fn Operation, from, to Comparable) {
 // DoMatch performs fn on all values stored in the tree that match q according to Compare.
 // If fn alters stored values, future tree operation behaviors are undefined.
 func (self *Tree) DoMatching(fn Operation, q Comparable) {
-	(*Node)(self).doMatch(fn, q)
+	if self.Root == nil {
+		return
+	}
+	self.Root.doMatch(fn, q)
 }
 
 func (self *Node) doMatch(fn Operation, q Comparable) {
-	if self == nil {
-		return
-	}
 	c := q.Compare(self.Elem)
-	if c <= 0 {
+	if c <= 0 && self.Left != nil {
 		self.Left.doMatch(fn, q)
 	}
 	if c == 0 {
 		fn(self.Elem)
 	}
-	if c >= 0 {
+	if c >= 0 && self.Right != nil {
 		self.Right.doMatch(fn, q)
 	}
 }

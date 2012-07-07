@@ -26,20 +26,20 @@ import (
 	"unsafe"
 )
 
-const (
-	none = iota
-	first
-	all
-	printTrees = first
+var (
+	printTree = flag.Bool("trees", false, "Print failing tree in Newick format.")
+	genDot    = flag.Bool("dot", false, "Generate dot code for failing trees.")
+	dotLimit  = flag.Int("dotmax", 100, "Maximum size for tree output for dot format.")
 )
-
-var genDot = flag.Bool("dot", false, "Generate dot code for TestDeleteRight trees.")
 
 // Integrity checks - translated from http://www.cs.princeton.edu/~rs/talks/LLRB/Java/RedBlackBST.java
 
 // Is this tree a BST?
 func (t *Tree) isBST() bool {
-	return (*Node)(t).isBST(t.Min(), t.Max())
+	if t == nil {
+		return true
+	}
+	return t.Root.isBST(t.Min(), t.Max())
 }
 
 // Are all the values in the BST rooted at x between min and max,
@@ -55,7 +55,12 @@ func (n *Node) isBST(min, max Comparable) bool {
 }
 
 // Test BU and TD234 invariants.
-func (t *Tree) is23_234() bool { return (*Node)(t).is23_234() }
+func (t *Tree) is23_234() bool {
+	if t == nil {
+		return true
+	}
+	return t.Root.is23_234()
+}
 func (n *Node) is23_234() bool {
 	if n == nil {
 		return true
@@ -90,13 +95,16 @@ func (n *Node) is23_234() bool {
 
 // Do all paths from root to leaf have same number of black edges?
 func (t *Tree) isBalanced() bool {
+	if t == nil {
+		return true
+	}
 	var black int // number of black links on path from root to min
-	for x := (*Node)(t); x != nil; x = x.Left {
+	for x := t.Root; x != nil; x = x.Left {
 		if x.color() == Black {
 			black++
 		}
 	}
-	return (*Node)(t).isBalanced(black)
+	return t.Root.isBalanced(black)
 }
 
 // Does every path from the root to a leaf have the given number 
@@ -257,237 +265,307 @@ func (s *S) TestRotateRight(c *check.C) {
 	c.Check(tree, check.DeepEquals, rotTree)
 }
 
-func filterDiff(t *Tree, _ int) *Tree { return t }
 func (s *S) TestNilOperations(c *check.C) {
-	var e *Tree
-	for _, t := range []*Tree{nil, {}} {
-		c.Check(t.Min(), check.Equals, nil)
-		c.Check(t.Max(), check.Equals, nil)
-		c.Check(filterDiff(t.DeleteMin()), check.Equals, e)
-		c.Check(filterDiff(t.DeleteMax()), check.Equals, e)
-	}
+	t := &Tree{}
+	c.Check(t.Min(), check.Equals, nil)
+	c.Check(t.Max(), check.Equals, nil)
+	t.DeleteMin()
+	c.Check(t, check.DeepEquals, &Tree{})
+	t.DeleteMax()
+	c.Check(t, check.DeepEquals, &Tree{})
 }
 
 func (s *S) TestInsertion(c *check.C) {
-	var (
-		printed  = false
-		min, max = compRune(0), compRune(1000)
-		d        int
-	)
-	for _, t := range []*Tree{nil, {}} {
-		for i := min; i <= max; i++ {
-			t, d = t.Insert(i)
-			c.Check(d, check.Equals, 1)
+	min, max := compRune(0), compRune(1000)
+	t := &Tree{}
+	for i := min; i <= max; i++ {
+		t.Insert(i)
+		c.Check(t.Len(), check.Equals, int(i+1))
+		failed := false
+		failed = failed || !c.Check(t.isBST(), check.Equals, true)
+		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
+		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+		if failed {
+			if *printTree {
+				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
+			}
+			if *genDot && t.Len() <= *dotLimit {
+				err := dotFile(t, fmt.Sprintf("TestInsertion_after_ins_%d", i), "")
+				if err != nil {
+					c.Errorf("Dot file write failed: %v", err)
+				}
+			}
+			c.Fatal("Cannot continue test: invariant contradiction")
+		}
+	}
+	c.Check(t.Min(), check.Equals, compRune(min))
+	c.Check(t.Max(), check.Equals, compRune(max))
+}
+
+func (s *S) TestDeletion(c *check.C) {
+	min, max := compRune(0), compRune(10000)
+	e := int(max-min) + 1
+	t := &Tree{}
+	for i := min; i <= max; i++ {
+		t.Insert(i)
+	}
+	for i := min; i <= max; i++ {
+		var dotString string
+		if t.Get(i) != nil {
+			e--
+		}
+		if *genDot && t.Len() <= *dotLimit {
+			dotString = dot(t, fmt.Sprintf("TestDeletion_before_%d", i))
+		}
+		t.Delete(i)
+		c.Check(t.Len(), check.Equals, e)
+		if i < max {
 			failed := false
 			failed = failed || !c.Check(t.isBST(), check.Equals, true)
 			failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 			failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
-			if failed && (printTrees > none && !printed) || printTrees == all {
-				printed = true
-				c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
-			}
-		}
-		c.Check(t.Min(), check.Equals, compRune(min))
-		c.Check(t.Max(), check.Equals, compRune(max))
-	}
-}
-
-func (s *S) TestDeletion(c *check.C) {
-	var (
-		printed  = false
-		min, max = compRune(0), compRune(10000)
-		d, e     int
-	)
-	for _, t := range []*Tree{nil, {}} {
-		for i := min; i <= max; i++ {
-			t, _ = t.Insert(i)
-		}
-		for i := min; i <= max; i++ {
-			if t.Get(i) != nil {
-				e = -1
-			} else {
-				e = 0
-			}
-			t, d = t.Delete(i)
-			c.Check(d, check.Equals, e)
-			if i < max {
-				failed := false
-				failed = failed || !c.Check(t.isBST(), check.Equals, true)
-				failed = failed || !c.Check(t.is23_234(), check.Equals, true)
-				failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
-				if failed && (printTrees > none && !printed) || printTrees == all {
-					printed = true
-					c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
+			if failed {
+				if *printTree {
+					c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
 				}
+				if *genDot && t.Len() < *dotLimit {
+					var err error
+					err = dotFile(nil, fmt.Sprintf("TestDeletion_before_del_%d", i), dotString)
+					if err != nil {
+						c.Errorf("Dot file write failed: %v", err)
+					}
+					err = dotFile(t, fmt.Sprintf("TestDeletion_after_del_%d", i), "")
+					if err != nil {
+						c.Errorf("Dot file write failed: %v", err)
+					}
+				}
+				c.Fatal("Cannot continue test: invariant contradiction")
 			}
 		}
-		c.Check(t, check.Equals, (*Tree)(nil))
 	}
+	c.Check(t, check.DeepEquals, &Tree{})
 }
 
 func (s *S) TestGet(c *check.C) {
 	min, max := compRune(0), compRune(100000)
-	for _, t := range []*Tree{nil, {}} {
-		for i := min; i <= max; i++ {
-			if i&1 == 0 {
-				t, _ = t.Insert(i)
-			}
+	t := &Tree{}
+	for i := min; i <= max; i++ {
+		if i&1 == 0 {
+			t.Insert(i)
 		}
-		for i := min; i <= max; i++ {
-			if i&1 == 0 {
-				c.Check(t.Get(i), check.DeepEquals, compRune(i)) // Check inserted elements are present.
-			} else {
-				c.Check(t.Get(i), check.Equals, Comparable(nil)) // Check inserted elements are absent.
-			}
+	}
+	for i := min; i <= max; i++ {
+		if i&1 == 0 {
+			c.Check(t.Get(i), check.DeepEquals, compRune(i)) // Check inserted elements are present.
+		} else {
+			c.Check(t.Get(i), check.Equals, Comparable(nil)) // Check inserted elements are absent.
 		}
 	}
 }
 
 func (s *S) TestRandomlyInsertedGet(c *check.C) {
 	count, max := 100000, 1000
-	for _, t := range []*Tree{nil, {}} {
-		verify := map[rune]struct{}{}
-		for i := 0; i < count; i++ {
-			v := compRune(rand.Intn(max))
-			t, _ = t.Insert(v)
-			verify[rune(v)] = struct{}{}
-		}
-		// Random fetch order - check only those inserted.
-		for v := range verify {
-			c.Check(t.Get(compRune(v)), check.DeepEquals, compRune(v)) // Check inserted elements are present.
-		}
-		// Check all possible insertions.
-		for i := compRune(0); i <= compRune(max); i++ {
-			if _, ok := verify[rune(i)]; ok {
-				c.Check(t.Get(i), check.DeepEquals, compRune(i)) // Check inserted elements are present.
-			} else {
-				c.Check(t.Get(i), check.Equals, Comparable(nil)) // Check inserted elements are absent.
-			}
+	t := &Tree{}
+	verify := map[rune]struct{}{}
+	for i := 0; i < count; i++ {
+		v := compRune(rand.Intn(max))
+		t.Insert(v)
+		verify[rune(v)] = struct{}{}
+	}
+	// Random fetch order - check only those inserted.
+	for v := range verify {
+		c.Check(t.Get(compRune(v)), check.DeepEquals, compRune(v)) // Check inserted elements are present.
+	}
+	// Check all possible insertions.
+	for i := compRune(0); i <= compRune(max); i++ {
+		if _, ok := verify[rune(i)]; ok {
+			c.Check(t.Get(i), check.DeepEquals, compRune(i)) // Check inserted elements are present.
+		} else {
+			c.Check(t.Get(i), check.Equals, Comparable(nil)) // Check inserted elements are absent.
 		}
 	}
 }
 
 func (s *S) TestRandomInsertion(c *check.C) {
-	var (
-		printed    bool
-		count, max = 100000, 1000
-		t          *Tree
-	)
+	count, max := 100000, 1000
+	t := &Tree{}
 	for i := 0; i < count; i++ {
-		t, _ = t.Insert(compRune(rand.Intn(max)))
+		r := rand.Intn(max)
+		t.Insert(compRune(r))
 		failed := false
 		failed = failed || !c.Check(t.isBST(), check.Equals, true)
 		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
-		if failed && (printTrees > none && !printed) || printTrees == all {
-			printed = true
-			c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
+		if failed {
+			if *printTree {
+				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
+			}
+			if *genDot && t.Len() <= *dotLimit {
+				err := dotFile(t, fmt.Sprintf("TestRandomInsertion_after_ins_%d", r), "")
+				if err != nil {
+					c.Errorf("Dot file write failed: %v", err)
+				}
+			}
+			c.Fatal("Cannot continue test: invariant contradiction")
 		}
 	}
 }
 
 func (s *S) TestRandomDeletion(c *check.C) {
 	var (
-		printed    bool
 		count, max = 100000, 1000
 		r          = make([]compRune, count)
-		t          *Tree
+		t          = &Tree{}
 	)
 	for i := range r {
 		r[i] = compRune(rand.Intn(max))
-		t, _ = t.Insert(r[i])
+		t.Insert(r[i])
 	}
 	for _, v := range r {
-		t, _ = t.Delete(v)
+		t.Delete(v)
 		if t != nil {
 			failed := false
 			failed = failed || !c.Check(t.isBST(), check.Equals, true)
 			failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 			failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
-			if failed && (printTrees > none && !printed) || printTrees == all {
-				printed = true
-				c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
+			if failed {
+				if *printTree {
+					c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
+				}
+				if *genDot && t.Len() <= *dotLimit {
+					err := dotFile(t, fmt.Sprintf("TestRandomDeletion_after_del_%d", v), "")
+					if err != nil {
+						c.Errorf("Dot file write failed: %v", err)
+					}
+				}
+				c.Fatal("Cannot continue test: invariant contradiction")
 			}
 		}
 	}
-	c.Check(t, check.Equals, (*Tree)(nil))
+	c.Check(t, check.DeepEquals, &Tree{})
 }
 
 func (s *S) TestDeleteMinMax(c *check.C) {
 	var (
-		printed  bool
 		min, max = compRune(0), compRune(10)
-		t        *Tree
-		d, dI    int
+		t        = &Tree{}
+		dI       int
 	)
 	for i := min; i <= max; i++ {
-		t, d = t.Insert(i)
-		dI += d
+		t.Insert(i)
+		dI = t.Len()
 	}
 	c.Check(dI, check.Equals, int(max-min+1))
 	for i, m := 0, int(max); i < m/2; i++ {
-		failed := false
-		t, d = t.DeleteMin()
-		c.Check(d, check.Equals, -1)
+		var failed bool
+		t.DeleteMin()
+		dI--
+		c.Check(t.Len(), check.Equals, dI)
 		min++
-		failed = failed || !c.Check(t.Min(), check.Equals, min)
-		t, d = t.DeleteMax()
-		c.Check(d, check.Equals, -1)
-		max--
-		failed = failed || !c.Check(t.Max(), check.Equals, max)
+		failed = !c.Check(t.Min(), check.Equals, min)
 		failed = failed || !c.Check(t.isBST(), check.Equals, true)
 		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
-		if failed && (printTrees > none && !printed) || printTrees == all {
-			printed = true
-			c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
+		if failed {
+			if *printTree {
+				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
+			}
+			if *genDot && t.Len() <= *dotLimit {
+				err := dotFile(t, fmt.Sprintf("TestRandomMinMax_after_delmin_%d", i), "")
+				if err != nil {
+					c.Errorf("Dot file write failed: %v", err)
+				}
+			}
+			c.Fatal("Cannot continue test: invariant contradiction")
+		}
+		t.DeleteMax()
+		dI--
+		c.Check(t.Len(), check.Equals, dI)
+		max--
+		failed = !c.Check(t.Max(), check.Equals, max)
+		failed = failed || !c.Check(t.isBST(), check.Equals, true)
+		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
+		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+		if failed {
+			if *printTree {
+				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
+			}
+			if *genDot && t.Len() <= *dotLimit {
+				err := dotFile(t, fmt.Sprintf("TestRandomMinMax_after_delmax_%d", i), "")
+				if err != nil {
+					c.Errorf("Dot file write failed: %v", err)
+				}
+			}
+			c.Fatal("Cannot continue test: invariant contradiction")
 		}
 	}
 }
 
 func (s *S) TestRandomInsertionDeletion(c *check.C) {
 	var (
-		printed    bool
 		count, max = 100000, 1000
-		t          *Tree
-		dI, dD     int
+		t          = &Tree{}
 		verify     = map[int]struct{}{}
 	)
 	for i := 0; i < count; i++ {
-		var d, e int
+		var (
+			failed    bool
+			r         int
+			dotString string
+		)
 		if rand.Float64() < 0.5 {
-			r := rand.Intn(max)
-			if _, ok := verify[r]; ok {
-				e = 0
-			} else {
-				e = 1
-			}
-			t, d = t.Insert(compRune(r))
+			r = rand.Intn(max)
+			t.Insert(compRune(r))
 			verify[r] = struct{}{}
-			c.Check(d, check.Equals, e)
-			dI += d
+			c.Check(t.Len(), check.Equals, len(verify))
 		}
-		if rand.Float64() < 0.5 {
-			r := rand.Intn(max)
-			if _, ok := verify[r]; ok {
-				e = -1
-			} else {
-				e = 0
-			}
-			t, d = t.Delete(compRune(r))
-			delete(verify, r)
-			dD += d
-		}
-		failed := false
-		failed = failed || !c.Check(t.isBST(), check.Equals, true)
+		failed = !c.Check(t.isBST(), check.Equals, true)
 		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
-		if failed && (printTrees > none && !printed) || printTrees == all {
-			printed = true
-			c.Logf("Failing tree: %s\n\n", describeTree((*Node)(t), false, true))
+		if *genDot && t.Len() <= *dotLimit {
+			dotString = dot(t, fmt.Sprintf("TestRandomInsertionDeletion_after_ins_%d", r))
+		}
+		if failed {
+			if *printTree {
+				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
+			}
+			if *genDot && t.Len() <= *dotLimit {
+				err := dotFile(nil, fmt.Sprintf("TestRandomInsertionDeletion_after_ins_%d", r), dotString)
+				if err != nil {
+					c.Errorf("Dot file write failed: %v", err)
+				}
+			}
+			c.Fatal("Cannot continue test: invariant contradiction")
+		}
+		if rand.Float64() < 0.5 {
+			r = rand.Intn(max)
+			t.Delete(compRune(r))
+			delete(verify, r)
+			c.Check(t.Len(), check.Equals, len(verify))
+		} else {
+			continue
+		}
+		failed = !c.Check(t.isBST(), check.Equals, true)
+		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
+		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+		if failed {
+			if *printTree {
+				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
+			}
+			if *genDot && t.Len() <= *dotLimit {
+				var err error
+				err = dotFile(nil, fmt.Sprintf("TestRandomInsertionDeletion_after_ins_%d", r), dotString)
+				if err != nil {
+					c.Errorf("Dot file write failed: %v", err)
+				}
+				err = dotFile(t, fmt.Sprintf("TestRandomInsertionDeletion_after_del_%d", r), "")
+				if err != nil {
+					c.Errorf("Dot file write failed: %v", err)
+				}
+			}
+			c.Fatal("Cannot continue test: invariant contradiction")
 		}
 	}
-	c.Check(dI+dD, check.Equals, len(verify), check.Commentf("Insertions: %d Deletions: %d", dI, -dD))
 }
 
 var (
@@ -499,7 +577,6 @@ func (s *S) TestDeleteRight(c *check.C) {
 	type target struct {
 		min, max, target compRune
 	}
-	var d int
 	for _, r := range []target{
 		{0, 14, 14},
 		{0, 15, 15},
@@ -508,28 +585,31 @@ func (s *S) TestDeleteRight(c *check.C) {
 		{0, 17, 16},
 		{0, 17, 17},
 	} {
-		var (
-			t      *Tree
-			format string
-		)
+		var format, dotString string
+		t := &Tree{}
 		for i := r.min; i <= r.max; i++ {
-			t, _ = t.Insert(i)
+			t.Insert(i)
 		}
-		before := describeTree((*Node)(t), false, true)
+		before := describeTree(t.Root, false, true)
 		format = "Before deletion: %#v %s"
-		checkTree(t, c, format, r, before)
-		if *genDot {
-			err := dot(t, fmt.Sprintf("%s_before_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target))
+		ok := checkTree(t, c, format, r, before)
+		if !ok {
+			c.Fatal("Cannot continue test: invariant contradiction")
+		}
+		if *genDot && t.Len() <= *dotLimit {
+			dotString = dot(t, fmt.Sprintf("TestDeleteRight_%s_before_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target))
+		}
+		t.Delete(r.target)
+		c.Check(t.Len(), check.Equals, int(r.max-r.min))
+		format = "%#v\nBefore deletion: %s\nAfter deletion:  %s"
+		ok = checkTree(t, c, format, r, before, describeTree(t.Root, false, true))
+		if !ok && *genDot && t.Len() < *dotLimit {
+			var err error
+			err = dotFile(nil, fmt.Sprintf("TestDeleteRight_%s_before_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target), dotString)
 			if err != nil {
 				c.Errorf("Dot file write failed: %v", err)
 			}
-		}
-		t, d = t.Delete(r.target)
-		c.Check(d, check.Equals, -1)
-		format = "%#v\nBefore deletion: %s\nAfter deletion:  %s"
-		checkTree(t, c, format, r, before, describeTree((*Node)(t), false, true))
-		if *genDot {
-			err := dot(t, fmt.Sprintf("%s_after_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target))
+			err = dotFile(t, fmt.Sprintf("TestDeleteRight_%s_after_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target), "")
 			if err != nil {
 				c.Errorf("Dot file write failed: %v", err)
 			}
@@ -537,25 +617,24 @@ func (s *S) TestDeleteRight(c *check.C) {
 	}
 }
 
-func checkTree(t *Tree, c *check.C, f string, i ...interface{}) {
+func checkTree(t *Tree, c *check.C, f string, i ...interface{}) (ok bool) {
 	comm := check.Commentf(f, i...)
-	c.Check(t.isBST(), check.Equals, true, comm)
-	c.Check(t.is23_234(), check.Equals, true, comm)
-	c.Check(t.isBalanced(), check.Equals, true, comm)
+	ok = true
+	ok = ok && c.Check(t.isBST(), check.Equals, true, comm)
+	ok = ok && c.Check(t.is23_234(), check.Equals, true, comm)
+	ok = ok && c.Check(t.isBalanced(), check.Equals, true, comm)
+	return
 }
 
-func dot(t *Tree, label string) (err error) {
+func dot(t *Tree, label string) string {
 	if t == nil {
-		return
+		return ""
 	}
 	var (
 		s      []string
 		follow func(*Node)
 	)
 	follow = func(n *Node) {
-		if n == nil {
-			return
-		}
 		id := uintptr(unsafe.Pointer(n))
 		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> %d|<Right>\"];", id, n.Elem)
 		if n.Left != nil {
@@ -570,16 +649,29 @@ func dot(t *Tree, label string) (err error) {
 		}
 		s = append(s, c)
 	}
-	follow((*Node)(t))
+	if t.Root != nil {
+		follow(t.Root)
+	}
+	return fmt.Sprintf("digraph %s {\n\tnode [shape=record,height=0.1];\n\t%s\n}\n",
+		label,
+		strings.Join(s, "\n\t"),
+	)
+}
+
+func dotFile(t *Tree, label, dotString string) (err error) {
+	if t == nil && dotString == "" {
+		return
+	}
 	f, err := os.Create(label + ".dot")
 	if err != nil {
 		return
 	}
 	defer f.Close()
-	fmt.Fprintf(f, "digraph %s {\n\tnode [shape=record,height=0.1];\n\t%s\n}\n",
-		label,
-		strings.Join(s, "\n\t"),
-	)
+	if dotString == "" {
+		fmt.Fprintf(f, dot(t, label))
+	} else {
+		fmt.Fprintf(f, dotString)
+	}
 	return
 }
 
@@ -602,24 +694,24 @@ func (ci compIntNoRep) Compare(i Comparable) int {
 }
 
 func BenchmarkInsert(b *testing.B) {
-	var t *Tree
+	t := &Tree{}
 	for i := 0; i < b.N; i++ {
-		t, _ = t.Insert(compInt(b.N - i))
+		t.Insert(compInt(b.N - i))
 	}
 }
 
 func BenchmarkInsertNoRep(b *testing.B) {
-	var t *Tree
+	t := &Tree{}
 	for i := 0; i < b.N; i++ {
-		t, _ = t.Insert(compIntNoRep(b.N - i))
+		t.Insert(compIntNoRep(b.N - i))
 	}
 }
 
 func BenchmarkGet(b *testing.B) {
 	b.StopTimer()
-	var t *Tree
+	t := &Tree{}
 	for i := 0; i < b.N; i++ {
-		t, _ = t.Insert(compInt(b.N - i))
+		t.Insert(compInt(b.N - i))
 	}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -629,25 +721,25 @@ func BenchmarkGet(b *testing.B) {
 
 func BenchmarkDelete(b *testing.B) {
 	b.StopTimer()
-	var t *Tree
+	t := &Tree{}
 	for i := 0; i < b.N; i++ {
-		t, _ = t.Insert(compInt(b.N - i))
+		t.Insert(compInt(b.N - i))
 	}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		t, _ = t.Delete(compInt(i))
+		t.Delete(compInt(i))
 	}
 }
 
 func BenchmarkDeleteMin(b *testing.B) {
 	b.StopTimer()
-	var t *Tree
+	t := &Tree{}
 	for i := 0; i < b.N; i++ {
-		t, _ = t.Insert(compInt(b.N - i))
+		t.Insert(compInt(b.N - i))
 	}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		t, _ = t.DeleteMin()
+		t.DeleteMin()
 	}
 }
 
