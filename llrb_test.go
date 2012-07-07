@@ -737,6 +737,34 @@ func BenchmarkGet(b *testing.B) {
 	}
 }
 
+func BenchmarkMin(b *testing.B) {
+	b.StopTimer()
+	t := &Tree{}
+	for i := 0; i < 1e5; i++ {
+		t.Insert(compInt(i))
+	}
+	b.StartTimer()
+	var m Comparable
+	for i := 0; i < b.N; i++ {
+		m = t.Min()
+	}
+	_ = m
+}
+
+func BenchmarkMax(b *testing.B) {
+	b.StopTimer()
+	t := &Tree{}
+	for i := 0; i < 1e5; i++ {
+		t.Insert(compInt(i))
+	}
+	b.StartTimer()
+	var m Comparable
+	for i := 0; i < b.N; i++ {
+		m = t.Max()
+	}
+	_ = m
+}
+
 func BenchmarkDelete(b *testing.B) {
 	b.StopTimer()
 	t := &Tree{}

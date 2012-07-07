@@ -339,11 +339,10 @@ func (self *Tree) Min() Comparable {
 	return self.Root.min().Elem
 }
 
-func (self *Node) min() *Node {
-	if self.Left == nil {
-		return self
+func (self *Node) min() (n *Node) {
+	for n = self; n.Left != nil; n = n.Left {
 	}
-	return self.Left.min()
+	return
 }
 
 // Return the maximum value stored in the tree. This will be the right-most maximum value if
@@ -355,11 +354,10 @@ func (self *Tree) Max() Comparable {
 	return self.Root.max().Elem
 }
 
-func (self *Node) max() *Node {
-	if self.Right == nil {
-		return self
+func (self *Node) max() (n *Node) {
+	for n = self; n.Right != nil; n = n.Right {
 	}
-	return self.Right.max()
+	return
 }
 
 // An Operation is a function that operates on a Comparable.
