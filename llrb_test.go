@@ -471,7 +471,7 @@ func (s *S) TestDeleteMinMax(c *check.C) {
 				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
 			}
 			if *genDot && t.Len() <= *dotLimit {
-				err := dotFile(t, fmt.Sprintf("TestRandomMinMax_after_delmin_%d", i), "")
+				err := dotFile(t, fmt.Sprintf("TestDeleteMinMax_after_delmin_%d", i), "")
 				if err != nil {
 					c.Errorf("Dot file write failed: %v", err)
 				}
@@ -491,7 +491,7 @@ func (s *S) TestDeleteMinMax(c *check.C) {
 				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
 			}
 			if *genDot && t.Len() <= *dotLimit {
-				err := dotFile(t, fmt.Sprintf("TestRandomMinMax_after_delmax_%d", i), "")
+				err := dotFile(t, fmt.Sprintf("TestDeleteMinMax_after_delmax_%d", i), "")
 				if err != nil {
 					c.Errorf("Dot file write failed: %v", err)
 				}
