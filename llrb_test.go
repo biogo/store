@@ -578,12 +578,20 @@ func (s *S) TestDeleteRight(c *check.C) {
 		min, max, target compRune
 	}
 	for _, r := range []target{
+		{0, 14, -1},
 		{0, 14, 14},
+		{0, 14, 15},
+		{0, 15, -1},
 		{0, 15, 15},
+		{0, 15, 16},
+		{0, 16, -1},
 		{0, 16, 15},
 		{0, 16, 16},
+		{0, 16, 17},
+		{0, 17, -1},
 		{0, 17, 16},
 		{0, 17, 17},
+		{0, 17, 18},
 	} {
 		var format, dotString string
 		t := &Tree{}
