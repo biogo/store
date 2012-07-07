@@ -608,7 +608,11 @@ func (s *S) TestDeleteRight(c *check.C) {
 			dotString = dot(t, fmt.Sprintf("TestDeleteRight_%s_before_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target))
 		}
 		t.Delete(r.target)
-		c.Check(t.Len(), check.Equals, int(r.max-r.min))
+		if r.min <= r.target && r.target <= r.max {
+			c.Check(t.Len(), check.Equals, int(r.max-r.min)) // Key in tree.
+		} else {
+			c.Check(t.Len(), check.Equals, int(r.max-r.min)+1) // Key not in tree.
+		}
 		format = "%#v\nBefore deletion: %s\nAfter deletion:  %s"
 		ok = checkTree(t, c, format, r, before, describeTree(t.Root, false, true))
 		if !ok && *genDot && t.Len() < *dotLimit {
