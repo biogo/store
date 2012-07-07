@@ -510,27 +510,27 @@ func (s *S) TestRandomInsertionDeletion(c *check.C) {
 	for i := 0; i < count; i++ {
 		var (
 			failed    bool
-			r         int
+			rI, rD    int
 			dotString string
 		)
 		if rand.Float64() < 0.5 {
-			r = rand.Intn(max)
-			t.Insert(compRune(r))
-			verify[r] = struct{}{}
+			rI = rand.Intn(max)
+			t.Insert(compRune(rI))
+			verify[rI] = struct{}{}
 			c.Check(t.Len(), check.Equals, len(verify))
 		}
 		failed = !c.Check(t.isBST(), check.Equals, true)
 		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
 		if *genDot && t.Len() <= *dotLimit {
-			dotString = dot(t, fmt.Sprintf("TestRandomInsertionDeletion_after_ins_%d", r))
+			dotString = dot(t, fmt.Sprintf("TestRandomInsertionDeletion_after_ins_%d_%d", i, rI))
 		}
 		if failed {
 			if *printTree {
 				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
 			}
 			if *genDot && t.Len() <= *dotLimit {
-				err := dotFile(nil, fmt.Sprintf("TestRandomInsertionDeletion_after_ins_%d", r), dotString)
+				err := dotFile(nil, fmt.Sprintf("TestRandomInsertionDeletion_after_ins_%d_%d", i, rI), dotString)
 				if err != nil {
 					c.Errorf("Dot file write failed: %v", err)
 				}
@@ -538,9 +538,9 @@ func (s *S) TestRandomInsertionDeletion(c *check.C) {
 			c.Fatal("Cannot continue test: invariant contradiction")
 		}
 		if rand.Float64() < 0.5 {
-			r = rand.Intn(max)
-			t.Delete(compRune(r))
-			delete(verify, r)
+			rD = rand.Intn(max)
+			t.Delete(compRune(rD))
+			delete(verify, rD)
 			c.Check(t.Len(), check.Equals, len(verify))
 		} else {
 			continue
@@ -554,11 +554,11 @@ func (s *S) TestRandomInsertionDeletion(c *check.C) {
 			}
 			if *genDot && t.Len() <= *dotLimit {
 				var err error
-				err = dotFile(nil, fmt.Sprintf("TestRandomInsertionDeletion_after_ins_%d", r), dotString)
+				err = dotFile(nil, fmt.Sprintf("TestRandomInsertionDeletion_after_ins_%d_%d", i, rI), dotString)
 				if err != nil {
 					c.Errorf("Dot file write failed: %v", err)
 				}
-				err = dotFile(t, fmt.Sprintf("TestRandomInsertionDeletion_after_del_%d", r), "")
+				err = dotFile(t, fmt.Sprintf("TestRandomInsertionDeletion_after_del_%d_%d", i, rD), "")
 				if err != nil {
 					c.Errorf("Dot file write failed: %v", err)
 				}
