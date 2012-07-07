@@ -605,7 +605,9 @@ func (s *S) TestDeleteRight(c *check.C) {
 			c.Fatal("Cannot continue test: invariant contradiction")
 		}
 		if *genDot && t.Len() <= *dotLimit {
-			dotString = dot(t, fmt.Sprintf("TestDeleteRight_%s_before_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target))
+			dotString = dot(t, strings.Replace(
+				fmt.Sprintf("TestDeleteRight_%s_before_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target),
+				"-", "_", -1))
 		}
 		t.Delete(r.target)
 		if r.min <= r.target && r.target <= r.max {
@@ -617,11 +619,15 @@ func (s *S) TestDeleteRight(c *check.C) {
 		ok = checkTree(t, c, format, r, before, describeTree(t.Root, false, true))
 		if !ok && *genDot && t.Len() < *dotLimit {
 			var err error
-			err = dotFile(nil, fmt.Sprintf("TestDeleteRight_%s_before_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target), dotString)
+			err = dotFile(nil, strings.Replace(
+				fmt.Sprintf("TestDeleteRight_%s_before_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target),
+				"-", "_", -1), dotString)
 			if err != nil {
 				c.Errorf("Dot file write failed: %v", err)
 			}
-			err = dotFile(t, fmt.Sprintf("TestDeleteRight_%s_after_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target), "")
+			err = dotFile(t, strings.Replace(
+				fmt.Sprintf("TestDeleteRight_%s_after_del_%d_%d_%d", modeName[Mode], r.min, r.max, r.target),
+				"-", "_", -1), "")
 			if err != nil {
 				c.Errorf("Dot file write failed: %v", err)
 			}
