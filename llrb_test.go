@@ -87,7 +87,7 @@ func (n *Node) is23_234() bool {
 	} else {
 		panic("unknown mode")
 	}
-	if n.color() == Red && n.Left.color() == Red && n.Left.Left.color() == Red {
+	if n.color() == Red && n.Left.color() == Red {
 		return false
 	}
 	return n.Left.is23_234() && n.Right.is23_234()
