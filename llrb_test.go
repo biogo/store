@@ -269,6 +269,9 @@ func (s *S) TestNilOperations(c *check.C) {
 	t := &Tree{}
 	c.Check(t.Min(), check.Equals, nil)
 	c.Check(t.Max(), check.Equals, nil)
+	if Mode == TD234 {
+		return
+	}
 	t.DeleteMin()
 	c.Check(t, check.DeepEquals, &Tree{})
 	t.DeleteMax()
@@ -303,6 +306,15 @@ func (s *S) TestInsertion(c *check.C) {
 }
 
 func (s *S) TestDeletion(c *check.C) {
+	if Mode == TD234 {
+		t := &Tree{}
+		panicMessage := "llrb: delete from TD234 tree not implemented"
+		c.Check(func() { t.DeleteMin() }, check.Panics, panicMessage)
+		c.Check(func() { t.DeleteMax() }, check.Panics, panicMessage)
+		c.Check(func() { t.Delete(Comparable(nil)) }, check.Panics, panicMessage)
+		c.Log("TD234 does not implement deletion.")
+		return
+	}
 	min, max := compRune(0), compRune(10000)
 	e := int(max-min) + 1
 	t := &Tree{}
@@ -412,6 +424,10 @@ func (s *S) TestRandomInsertion(c *check.C) {
 }
 
 func (s *S) TestRandomDeletion(c *check.C) {
+	if Mode == TD234 {
+		c.Log("TD234 does not implement deletion.")
+		return
+	}
 	var (
 		count, max = 100000, 1000
 		r          = make([]compRune, count)
@@ -446,6 +462,10 @@ func (s *S) TestRandomDeletion(c *check.C) {
 }
 
 func (s *S) TestDeleteMinMax(c *check.C) {
+	if Mode == TD234 {
+		c.Log("TD234 does not implement deletion.")
+		return
+	}
 	var (
 		min, max = compRune(0), compRune(10)
 		t        = &Tree{}
@@ -502,6 +522,10 @@ func (s *S) TestDeleteMinMax(c *check.C) {
 }
 
 func (s *S) TestRandomInsertionDeletion(c *check.C) {
+	if Mode == TD234 {
+		c.Log("TD234 does not implement deletion.")
+		return
+	}
 	var (
 		count, max = 100000, 1000
 		t          = &Tree{}
@@ -574,6 +598,10 @@ var (
 )
 
 func (s *S) TestDeleteRight(c *check.C) {
+	if Mode == TD234 {
+		c.Log("TD234 does not implement deletion.")
+		return
+	}
 	type target struct {
 		min, max, target compRune
 	}
@@ -766,6 +794,9 @@ func BenchmarkMax(b *testing.B) {
 }
 
 func BenchmarkDelete(b *testing.B) {
+	if Mode == TD234 {
+		return
+	}
 	b.StopTimer()
 	t := &Tree{}
 	for i := 0; i < b.N; i++ {
@@ -778,6 +809,9 @@ func BenchmarkDelete(b *testing.B) {
 }
 
 func BenchmarkDeleteMin(b *testing.B) {
+	if Mode == TD234 {
+		return
+	}
 	b.StopTimer()
 	t := &Tree{}
 	for i := 0; i < b.N; i++ {
