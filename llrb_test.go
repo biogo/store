@@ -375,6 +375,42 @@ func (s *S) TestGet(c *check.C) {
 	}
 }
 
+func (s *S) TestFloor(c *check.C) {
+	min, max := compRune(0), compRune(100000)
+	t := &Tree{}
+	for i := min; i <= max; i++ {
+		if i&1 == 0 { // Insert even numbers only.
+			t.Insert(i)
+		}
+	}
+	for i := min; i <= max; i++ {
+		if i&1 == 0 {
+			c.Check(t.Floor(i), check.Equals, compRune(i)) // Check even Floors are themselves.
+		} else {
+			c.Check(t.Floor(i), check.Equals, compRune(i-1)) // Check odd Floors are the previous number.
+		}
+	}
+	c.Check(t.Floor(min-1), check.Equals, Comparable(nil))
+}
+
+func (s *S) TestCeil(c *check.C) {
+	min, max := compRune(0), compRune(100000)
+	t := &Tree{}
+	for i := min; i <= max; i++ {
+		if i&1 == 1 { // Insert odd numbers only.
+			t.Insert(i)
+		}
+	}
+	for i := min; i < max; i++ {
+		if i&1 == 1 {
+			c.Check(t.Ceil(i), check.Equals, compRune(i)) // Check odd Ceils are themselves.
+		} else {
+			c.Check(t.Ceil(i), check.Equals, compRune(i+1)) // Check even Ceils are the next number.
+		}
+	}
+	c.Check(t.Ceil(max+1), check.Equals, Comparable(nil))
+}
+
 func (s *S) TestRandomlyInsertedGet(c *check.C) {
 	count, max := 100000, 1000
 	t := &Tree{}

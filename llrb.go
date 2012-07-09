@@ -375,6 +375,64 @@ func (self *Node) max() (n *Node) {
 	return
 }
 
+// Floor returns the greatest value equal to or less than the query q.
+func (self *Tree) Floor(q Comparable) Comparable {
+	if self.Root == nil {
+		return nil
+	}
+	n := self.Root.floor(q)
+	if n == nil {
+		return nil
+	}
+	return n.Elem
+}
+
+func (self *Node) floor(q Comparable) *Node {
+	if self == nil {
+		return nil
+	}
+	switch c := q.Compare(self.Elem); {
+	case c == 0:
+		return self
+	case c < 0:
+		return self.Left.floor(q)
+	default:
+		if r := self.Right.floor(q); r != nil {
+			return r
+		}
+	}
+	return self
+}
+
+// Ceil returns the smallest value equal to or grater than the query q.
+func (self *Tree) Ceil(q Comparable) Comparable {
+	if self.Root == nil {
+		return nil
+	}
+	n := self.Root.ceil(q)
+	if n == nil {
+		return nil
+	}
+	return n.Elem
+}
+
+func (self *Node) ceil(q Comparable) *Node {
+	if self == nil {
+		return nil
+	}
+	switch c := q.Compare(self.Elem); {
+	case c == 0:
+		return self
+	case c > 0:
+		return self.Right.ceil(q)
+	default:
+		if l := self.Left.ceil(q); l != nil {
+			return l
+		}
+	}
+	return self
+}
+
 // An Operation is a function that operates on a Comparable.
 type Operation func(Comparable)
 
