@@ -436,8 +436,8 @@ func (self *Node) ceil(q Comparable) *Node {
 // An Operation is a function that operates on a Comparable.
 type Operation func(Comparable)
 
-// Do performs fn on all values stored in the tree. If fn alters stored values, future tree
-// operation behaviors are undefined.
+// Do performs fn on all values stored in the tree. If fn alters stored values' sort
+// relationships, future tree operation behaviors are undefined.
 func (self *Tree) Do(fn Operation) {
 	if self.Root == nil {
 		return
@@ -457,8 +457,8 @@ func (self *Node) do(fn Operation) {
 
 // DoRange performs fn on all values stored in the tree between from and to. If from is
 // less than to, the operations are performed from left to right. If from is greater than
-// to then the operations are performed from right to left. If fn alters stored values,
-// future tree operation behaviors are undefined.
+// to then the operations are performed from right to left. If fn alters stored values'
+// sort relationships future tree operation behaviors are undefined.
 func (self *Tree) DoRange(fn Operation, from, to Comparable) {
 	if self.Root == nil {
 		return
@@ -500,7 +500,7 @@ func (self *Node) doRangeReverse(fn Operation, from, to Comparable) {
 }
 
 // DoMatch performs fn on all values stored in the tree that match q according to Compare.
-// If fn alters stored values, future tree operation behaviors are undefined.
+// If fn alters stored values' sort relationships, future tree operation behaviors are undefined.
 func (self *Tree) DoMatching(fn Operation, q Comparable) {
 	if self.Root == nil {
 		return
