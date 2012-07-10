@@ -455,10 +455,10 @@ func (self *Node) do(fn Operation) {
 	}
 }
 
-// DoRange performs fn on all values stored in the tree between from and to. If from is
-// less than to, the operations are performed from left to right. If from is greater than
-// to then the operations are performed from right to left. If fn alters stored values'
-// sort relationships future tree operation behaviors are undefined.
+// DoRange performs fn on all values stored in the tree over the interval [from, to) from left
+// to right. If to equals from the call is a no-op, and if to is less than from DoRange will
+// panic. If fn  alters stored values' sort relationships future tree operation behaviors are
+// undefined.
 func (self *Tree) DoRange(fn Operation, from, to Comparable) {
 	if self.Root == nil {
 		return
@@ -467,9 +467,7 @@ func (self *Tree) DoRange(fn Operation, from, to Comparable) {
 	case order < 0:
 		self.Root.doRange(fn, from, to)
 	case order > 0:
-		self.Root.doRangeReverse(fn, from, to)
-	default:
-		self.Root.doMatch(fn, from)
+		panic("llrb: inverted range")
 	}
 }
 
@@ -478,20 +476,36 @@ func (self *Node) doRange(fn Operation, from, to Comparable) {
 	if fc <= 0 && self.Left != nil {
 		self.Left.doRange(fn, from, to)
 	}
-	if fc <= 0 && tc >= 0 {
+	if fc <= 0 && tc > 0 {
 		fn(self.Elem)
 	}
-	if tc >= 0 && self.Right != nil {
+	if tc > 0 && self.Right != nil {
 		self.Right.doRange(fn, from, to)
+	}
+}
+
+// DoRangeReverse performs fn on all values stored in the tree over the interval [to, from) from
+// right to left. If from equals to the call is a no-op, and if from is less than to DoRange will
+// panic. If fn alters stored values' sort relationships future tree operation behaviors are
+// undefined.
+func (self *Tree) DoRangeReverse(fn Operation, from, to Comparable) {
+	if self.Root == nil {
+		return
+	}
+	switch order := from.Compare(to); {
+	case order > 0:
+		self.Root.doRangeReverse(fn, from, to)
+	case order < 0:
+		panic("llrb: inverted range")
 	}
 }
 
 func (self *Node) doRangeReverse(fn Operation, from, to Comparable) {
 	fc, tc := from.Compare(self.Elem), to.Compare(self.Elem)
-	if tc >= 0 && self.Right != nil {
+	if tc > 0 && self.Right != nil {
 		self.Right.doRangeReverse(fn, from, to)
 	}
-	if fc <= 0 && tc >= 0 {
+	if fc <= 0 && tc > 0 {
 		fn(self.Elem)
 	}
 	if fc <= 0 && self.Left != nil {
