@@ -27,6 +27,12 @@ const (
 // Operation mode of the LLRB tree. Currently only BU23 supports deletion.
 const Mode = BU23
 
+func init() {
+	if Mode != TD234 && Mode != BU23 {
+		panic("llrb: unknown mode")
+	}
+}
+
 // A Comparable is a type that can be inserted into a Tree or used as a range
 // or equality query on the tree,
 type Comparable interface {
@@ -236,8 +242,6 @@ func (self *Node) insert(e Comparable) (root *Node, d int) {
 func (self *Tree) DeleteMin() {
 	if Mode == TD234 {
 		panic("llrb: delete from TD234 tree not implemented")
-	} else if Mode != BU23 {
-		panic("unknown mode")
 	}
 	if self.Root == nil {
 		return
@@ -267,8 +271,6 @@ func (self *Node) deleteMin() (root *Node, d int) {
 func (self *Tree) DeleteMax() {
 	if Mode == TD234 {
 		panic("llrb: delete from TD234 tree not implemented")
-	} else if Mode != BU23 {
-		panic("unknown mode")
 	}
 	if self.Root == nil {
 		return
@@ -300,8 +302,6 @@ func (self *Node) deleteMax() (root *Node, d int) {
 func (self *Tree) Delete(e Comparable) {
 	if Mode == TD234 {
 		panic("llrb: delete from TD234 tree not implemented")
-	} else if Mode != BU23 {
-		panic("unknown mode")
 	}
 	if self.Root == nil {
 		return

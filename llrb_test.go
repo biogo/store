@@ -85,7 +85,7 @@ func (n *Node) is23_234() bool {
 			return false
 		}
 	} else {
-		panic("unknown mode")
+		panic("cannot reach")
 	}
 	if n.color() == Red && n.Left.color() == Red {
 		return false
