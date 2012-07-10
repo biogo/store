@@ -375,7 +375,7 @@ func (self *Node) max() (n *Node) {
 	return
 }
 
-// Floor returns the greatest value equal to or less than the query q.
+// Floor returns the greatest value equal to or less than the query q according to q.Compare().
 func (self *Tree) Floor(q Comparable) Comparable {
 	if self.Root == nil {
 		return nil
@@ -404,7 +404,7 @@ func (self *Node) floor(q Comparable) *Node {
 	return self
 }
 
-// Ceil returns the smallest value equal to or grater than the query q.
+// Ceil returns the smallest value equal to or greater than the query q according to q.Compare().
 func (self *Tree) Ceil(q Comparable) Comparable {
 	if self.Root == nil {
 		return nil
@@ -499,8 +499,11 @@ func (self *Node) doRangeReverse(fn Operation, from, to Comparable) {
 	}
 }
 
-// DoMatch performs fn on all values stored in the tree that match q according to Compare.
-// If fn alters stored values' sort relationships, future tree operation behaviors are undefined.
+// DoMatch performs fn on all values stored in the tree that match q according to Compare, with
+// q.Compare() used to guide tree traversal, so DoMatching() will out perform Do() with a called
+// conditional function if the condition is based on sort order, but can not be reliably used if
+// the condition is independent of sort order. If fn alters stored values' sort relationships,
+// future tree operation behaviors are undefined.
 func (self *Tree) DoMatching(fn Operation, q Comparable) {
 	if self.Root == nil {
 		return
