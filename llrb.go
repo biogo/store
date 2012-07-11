@@ -24,7 +24,7 @@ const (
 	BU23
 )
 
-// Operation mode of the LLRB tree. Currently only BU23 supports deletion.
+// Operation mode of the LLRB tree.
 const Mode = BU23
 
 func init() {
@@ -119,15 +119,18 @@ func (self *Node) flipColors() {
 }
 
 // fixUp ensures that black link balance is correct, that red nodes lean left,
-// and that 4 nodes are split.
+// and that 4 nodes are split in the case of BU23 and properly balanced in TD234.
 func (self *Node) fixUp() *Node {
 	if self.Right.color() == Red {
+		if Mode == TD234 && self.Right.Left.color() == Red {
+			self.Right = self.Right.rotateRight()
+		}
 		self = self.rotateLeft()
 	}
 	if self.Left.color() == Red && self.Left.Left.color() == Red {
 		self = self.rotateRight()
 	}
-	if self.Left.color() == Red && self.Right.color() == Red {
+	if Mode == BU23 && self.Left.color() == Red && self.Right.color() == Red {
 		self.flipColors()
 	}
 	return self
@@ -139,6 +142,9 @@ func (self *Node) moveRedLeft() *Node {
 		self.Right = self.Right.rotateRight()
 		self = self.rotateLeft()
 		self.flipColors()
+		if Mode == TD234 && self.Right.Right.color() == Red {
+			self.Right = self.Right.rotateLeft()
+		}
 	}
 	return self
 }
@@ -240,9 +246,6 @@ func (self *Node) insert(e Comparable) (root *Node, d int) {
 // DeleteMin deletes the node with the minimum value in the tree. If insertion without
 // replacement has been used the the left-most minimum will be deleted.
 func (self *Tree) DeleteMin() {
-	if Mode == TD234 {
-		panic("llrb: delete from TD234 tree not implemented")
-	}
 	if self.Root == nil {
 		return
 	}
@@ -269,9 +272,6 @@ func (self *Node) deleteMin() (root *Node, d int) {
 // DeleteMax deletes the node with the maximum value in the tree. If insertion without
 // replacement has been used the the right-most maximum will be deleted.
 func (self *Tree) DeleteMax() {
-	if Mode == TD234 {
-		panic("llrb: delete from TD234 tree not implemented")
-	}
 	if self.Root == nil {
 		return
 	}
@@ -300,9 +300,6 @@ func (self *Node) deleteMax() (root *Node, d int) {
 
 // Delete deletes the first node found that matches e according to Compare().
 func (self *Tree) Delete(e Comparable) {
-	if Mode == TD234 {
-		panic("llrb: delete from TD234 tree not implemented")
-	}
 	if self.Root == nil {
 		return
 	}
