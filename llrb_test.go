@@ -81,7 +81,7 @@ func (n *Node) is23_234() bool {
 		// This test is altered from that shown in the java since the trees
 		// shown in the paper do not conform to the test as it existed and the
 		// current situation does not break the 2-3-4 definition of the LLRB.
-		if n.Right.color() == Red && n.Left.color() == Black && n.Left != nil {
+		if n.Right.color() == Red && n.Left.color() == Black {
 			return false
 		}
 	} else {
