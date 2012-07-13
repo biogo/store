@@ -21,6 +21,7 @@ import (
 	check "launchpad.net/gocheck"
 	"math/rand"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 	"unsafe"
@@ -737,8 +738,6 @@ func dotFile(t *Tree, label, dotString string) (err error) {
 	return
 }
 
-// Benchmarks
-
 type compInt int
 
 func (ci compInt) Compare(i Comparable) int {
@@ -754,6 +753,117 @@ func (ci compIntNoRep) Compare(i Comparable) int {
 	}
 	return c
 }
+
+type Reverse struct {
+	sort.Interface
+}
+
+func (r Reverse) Less(i, j int) bool { return r.Interface.Less(j, i) }
+
+type compInts []compInt
+
+func (c compInts) Len() int           { return len(c) }
+func (c compInts) Less(i, j int) bool { return c[i].Compare(c[j]) < 0 }
+func (c compInts) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+
+var values = compInts{-10, -32, 100, 46, 239, 2349, 101, 0, 1}
+
+func (s *S) TestDo(c *check.C) {
+	values := append(compInts(nil), values...)
+	t := &Tree{}
+	for _, v := range values {
+		t.Insert(v)
+	}
+	var result compInts
+	f := func(c Comparable) (done bool) {
+		result = append(result, c.(compInt))
+		return
+	}
+	killed := t.Do(f)
+	sort.Sort(values)
+	c.Check(result, check.DeepEquals, values)
+	c.Check(killed, check.Equals, false)
+}
+
+func (s *S) TestDoShortCircuit(c *check.C) {
+	values := append(compInts(nil), values...)
+	elem := 3
+	t := &Tree{}
+	for _, v := range values {
+		t.Insert(v)
+	}
+	sort.Sort(values)
+	target := values[elem]
+	var result compInts
+	f := func(c Comparable) (done bool) {
+		result = append(result, c.(compInt))
+		if target.Compare(c) == 0 {
+			done = true
+		}
+		return
+	}
+	killed := t.Do(f)
+	c.Check(result, check.DeepEquals, values[:elem+1])
+	c.Check(killed, check.Equals, true)
+}
+
+func (s *S) TestDoReverse(c *check.C) {
+	values := append(compInts(nil), values...)
+	t := &Tree{}
+	for _, v := range values {
+		t.Insert(v)
+	}
+	var result compInts
+	f := func(c Comparable) (done bool) {
+		result = append(result, c.(compInt))
+		return
+	}
+	killed := t.DoReverse(f)
+	sort.Sort(Reverse{values})
+	c.Check(result, check.DeepEquals, values)
+	c.Check(killed, check.Equals, false)
+}
+
+func (s *S) TestDoRange(c *check.C) {
+	values := append(compInts(nil), values...)
+	lo, hi := compInt(0), compInt(100)
+	var limValues compInts
+	t := &Tree{}
+	for _, v := range values {
+		t.Insert(v)
+		if v >= lo && v < hi {
+			limValues = append(limValues, v)
+		}
+	}
+	var result compInts
+	f := func(c Comparable) (done bool) {
+		result = append(result, c.(compInt))
+		return
+	}
+	killed := t.DoRange(f, compInt(0), compInt(100))
+	sort.Sort(limValues)
+	c.Check(result, check.DeepEquals, limValues)
+	c.Check(killed, check.Equals, false)
+}
+
+func (s *S) TestDoMatch(c *check.C) {
+	values := append(compInts(nil), values...)
+	elem := 3
+	t := &Tree{}
+	for _, v := range values {
+		t.Insert(v)
+	}
+	sort.Sort(values)
+	target := values[elem]
+	f := func(r Comparable) (done bool) {
+		c.Check(r, check.Equals, target)
+		return
+	}
+	killed := t.DoMatching(f, target)
+	c.Check(killed, check.Equals, false)
+}
+
+// Benchmarks
 
 func BenchmarkInsert(b *testing.B) {
 	t := &Tree{}

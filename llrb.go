@@ -430,107 +430,170 @@ func (self *Node) ceil(q Comparable) *Node {
 	return self
 }
 
-// An Operation is a function that operates on a Comparable.
-type Operation func(Comparable)
+// An Operation is a function that operates on a Comparable. If done is returned true, the
+// Operation is indicating that no further work needs to be done and so the Do function should
+// traverse no further.
+type Operation func(Comparable) (done bool)
 
-// Do performs fn on all values stored in the tree. If fn alters stored values' sort
+// Do performs fn on all values stored in the tree. A boolean is returned indicating whether the
+// Do traversal was interupted by an Operation returning true. If fn alters stored values' sort
 // relationships, future tree operation behaviors are undefined.
-func (self *Tree) Do(fn Operation) {
+func (self *Tree) Do(fn Operation) bool {
 	if self.Root == nil {
-		return
+		return false
 	}
-	self.Root.do(fn)
+	return self.Root.do(fn)
 }
 
-func (self *Node) do(fn Operation) {
+func (self *Node) do(fn Operation) (done bool) {
 	if self.Left != nil {
-		self.Left.do(fn)
+		done = self.Left.do(fn)
+		if done {
+			return
+		}
 	}
-	fn(self.Elem)
+	done = fn(self.Elem)
+	if done {
+		return
+	}
 	if self.Right != nil {
-		self.Right.do(fn)
+		done = self.Right.do(fn)
 	}
+	return
+}
+
+// DoReverse performs fn on all values stored in the tree, but in reverse of sort order. A boolean
+// is returned indicating whether the Do traversal was interupted by an Operation returning true.
+// If fn alters stored values' sort relationships, future tree operation behaviors are undefined.
+func (self *Tree) DoReverse(fn Operation) bool {
+	if self.Root == nil {
+		return false
+	}
+	return self.Root.doReverse(fn)
+}
+
+func (self *Node) doReverse(fn Operation) (done bool) {
+	if self.Right != nil {
+		done = self.Right.doReverse(fn)
+		if done {
+			return
+		}
+	}
+	done = fn(self.Elem)
+	if done {
+		return
+	}
+	if self.Left != nil {
+		done = self.Left.doReverse(fn)
+	}
+	return
 }
 
 // DoRange performs fn on all values stored in the tree over the interval [from, to) from left
 // to right. If to equals from the call is a no-op, and if to is less than from DoRange will
-// panic. If fn  alters stored values' sort relationships future tree operation behaviors are
-// undefined.
-func (self *Tree) DoRange(fn Operation, from, to Comparable) {
+// panic. A boolean is returned indicating whether the Do traversal was interupted by an
+// Operation returning true. If fn alters stored values' sort relationships future tree
+// operation behaviors are undefined.
+func (self *Tree) DoRange(fn Operation, from, to Comparable) bool {
 	if self.Root == nil {
-		return
+		return false
 	}
 	switch order := from.Compare(to); {
 	case order < 0:
-		self.Root.doRange(fn, from, to)
+		return self.Root.doRange(fn, from, to)
 	case order > 0:
 		panic("llrb: inverted range")
 	}
+	return false
 }
 
-func (self *Node) doRange(fn Operation, from, to Comparable) {
+func (self *Node) doRange(fn Operation, from, to Comparable) (done bool) {
 	fc, tc := from.Compare(self.Elem), to.Compare(self.Elem)
 	if fc <= 0 && self.Left != nil {
-		self.Left.doRange(fn, from, to)
+		done = self.Left.doRange(fn, from, to)
+		if done {
+			return
+		}
 	}
 	if fc <= 0 && tc > 0 {
-		fn(self.Elem)
+		done = fn(self.Elem)
+		if done {
+			return
+		}
 	}
 	if tc > 0 && self.Right != nil {
-		self.Right.doRange(fn, from, to)
+		done = self.Right.doRange(fn, from, to)
 	}
+	return
 }
 
 // DoRangeReverse performs fn on all values stored in the tree over the interval [to, from) from
 // right to left. If from equals to the call is a no-op, and if from is less than to DoRange will
-// panic. If fn alters stored values' sort relationships future tree operation behaviors are
-// undefined.
-func (self *Tree) DoRangeReverse(fn Operation, from, to Comparable) {
+// panic. A boolean is returned indicating whether the Do traversal was interupted by an Operation
+// returning true. If fn alters stored values' sort relationships future tree operation behaviors
+// are undefined.
+func (self *Tree) DoRangeReverse(fn Operation, from, to Comparable) bool {
 	if self.Root == nil {
-		return
+		return false
 	}
 	switch order := from.Compare(to); {
 	case order > 0:
-		self.Root.doRangeReverse(fn, from, to)
+		return self.Root.doRangeReverse(fn, from, to)
 	case order < 0:
 		panic("llrb: inverted range")
 	}
+	return false
 }
 
-func (self *Node) doRangeReverse(fn Operation, from, to Comparable) {
+func (self *Node) doRangeReverse(fn Operation, from, to Comparable) (done bool) {
 	fc, tc := from.Compare(self.Elem), to.Compare(self.Elem)
 	if tc > 0 && self.Right != nil {
-		self.Right.doRangeReverse(fn, from, to)
+		done = self.Right.doRangeReverse(fn, from, to)
+		if done {
+			return
+		}
 	}
 	if fc <= 0 && tc > 0 {
-		fn(self.Elem)
+		done = fn(self.Elem)
+		if done {
+			return
+		}
 	}
 	if fc <= 0 && self.Left != nil {
-		self.Left.doRangeReverse(fn, from, to)
+		done = self.Left.doRangeReverse(fn, from, to)
 	}
+	return
 }
 
 // DoMatch performs fn on all values stored in the tree that match q according to Compare, with
 // q.Compare() used to guide tree traversal, so DoMatching() will out perform Do() with a called
 // conditional function if the condition is based on sort order, but can not be reliably used if
-// the condition is independent of sort order. If fn alters stored values' sort relationships,
-// future tree operation behaviors are undefined.
-func (self *Tree) DoMatching(fn Operation, q Comparable) {
+// the condition is independent of sort order. A boolean is returned indicating whether the Do
+// traversal was interupted by an Operation returning true.If fn alters stored values' sort
+// relationships, future tree operation behaviors are undefined.
+func (self *Tree) DoMatching(fn Operation, q Comparable) bool {
 	if self.Root == nil {
-		return
+		return false
 	}
-	self.Root.doMatch(fn, q)
+	return self.Root.doMatch(fn, q)
 }
 
-func (self *Node) doMatch(fn Operation, q Comparable) {
+func (self *Node) doMatch(fn Operation, q Comparable) (done bool) {
 	c := q.Compare(self.Elem)
 	if c <= 0 && self.Left != nil {
-		self.Left.doMatch(fn, q)
+		done = self.Left.doMatch(fn, q)
+		if done {
+			return
+		}
 	}
 	if c == 0 {
-		fn(self.Elem)
+		done = fn(self.Elem)
+		if done {
+			return
+		}
 	}
 	if c >= 0 && self.Right != nil {
-		self.Right.doMatch(fn, q)
+		done = self.Right.doMatch(fn, q)
 	}
+	return
 }
