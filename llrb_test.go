@@ -840,8 +840,30 @@ func (s *S) TestDoRange(c *check.C) {
 		result = append(result, c.(compInt))
 		return
 	}
-	killed := t.DoRange(f, compInt(0), compInt(100))
+	killed := t.DoRange(f, lo, hi)
 	sort.Sort(limValues)
+	c.Check(result, check.DeepEquals, limValues)
+	c.Check(killed, check.Equals, false)
+}
+
+func (s *S) TestDoRangeReverse(c *check.C) {
+	values := append(compInts(nil), values...)
+	lo, hi := compInt(0), compInt(100)
+	var limValues compInts
+	t := &Tree{}
+	for _, v := range values {
+		t.Insert(v)
+		if v >= lo && v < hi {
+			limValues = append(limValues, v)
+		}
+	}
+	var result compInts
+	f := func(c Comparable) (done bool) {
+		result = append(result, c.(compInt))
+		return
+	}
+	killed := t.DoRangeReverse(f, hi, lo)
+	sort.Sort(Reverse{limValues})
 	c.Check(result, check.DeepEquals, limValues)
 	c.Check(killed, check.Equals, false)
 }

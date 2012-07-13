@@ -507,22 +507,22 @@ func (self *Tree) DoRange(fn Operation, from, to Comparable) bool {
 	return false
 }
 
-func (self *Node) doRange(fn Operation, from, to Comparable) (done bool) {
-	fc, tc := from.Compare(self.Elem), to.Compare(self.Elem)
-	if fc <= 0 && self.Left != nil {
-		done = self.Left.doRange(fn, from, to)
+func (self *Node) doRange(fn Operation, lo, hi Comparable) (done bool) {
+	lc, hc := lo.Compare(self.Elem), hi.Compare(self.Elem)
+	if lc <= 0 && self.Left != nil {
+		done = self.Left.doRange(fn, lo, hi)
 		if done {
 			return
 		}
 	}
-	if fc <= 0 && tc > 0 {
+	if lc <= 0 && hc > 0 {
 		done = fn(self.Elem)
 		if done {
 			return
 		}
 	}
-	if tc > 0 && self.Right != nil {
-		done = self.Right.doRange(fn, from, to)
+	if hc > 0 && self.Right != nil {
+		done = self.Right.doRange(fn, lo, hi)
 	}
 	return
 }
@@ -545,22 +545,22 @@ func (self *Tree) DoRangeReverse(fn Operation, from, to Comparable) bool {
 	return false
 }
 
-func (self *Node) doRangeReverse(fn Operation, from, to Comparable) (done bool) {
-	fc, tc := from.Compare(self.Elem), to.Compare(self.Elem)
-	if tc > 0 && self.Right != nil {
-		done = self.Right.doRangeReverse(fn, from, to)
+func (self *Node) doRangeReverse(fn Operation, hi, lo Comparable) (done bool) {
+	lc, hc := lo.Compare(self.Elem), hi.Compare(self.Elem)
+	if hc > 0 && self.Right != nil {
+		done = self.Right.doRangeReverse(fn, hi, lo)
 		if done {
 			return
 		}
 	}
-	if fc <= 0 && tc > 0 {
+	if lc <= 0 && hc > 0 {
 		done = fn(self.Elem)
 		if done {
 			return
 		}
 	}
-	if fc <= 0 && self.Left != nil {
-		done = self.Left.doRangeReverse(fn, from, to)
+	if lc <= 0 && self.Left != nil {
+		done = self.Left.doRangeReverse(fn, hi, lo)
 	}
 	return
 }
