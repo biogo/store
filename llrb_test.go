@@ -408,6 +408,24 @@ func (s *S) TestCeil(c *check.C) {
 	c.Check(t.Ceil(max+1), check.Equals, Comparable(nil))
 }
 
+func (s *S) TestUpper(c *check.C) {
+	min, max := compInt(0), compInt(100000)
+	t := &Tree{}
+	for i := min; i <= max; i++ {
+		if i&1 == 1 { // Insert odd numbers only.
+			t.Insert(i)
+		}
+	}
+	for i := min; i < max-1; i++ {
+		if i&1 == 1 {
+			c.Check(t.Ceil(compIntNoRep(i)), check.Equals, compInt(i+2)) // Check odd Uppers are the next odd.
+		} else {
+			c.Check(t.Ceil(compIntNoRep(i)), check.Equals, compInt(i+1)) // Check even Uppers are the next number.
+		}
+	}
+	c.Check(t.Ceil(compIntNoRep(max+1)), check.Equals, Comparable(nil))
+}
+
 func (s *S) TestRandomlyInsertedGet(c *check.C) {
 	count, max := 100000, 1000
 	t := &Tree{}
@@ -746,8 +764,13 @@ func (ci compInt) Compare(i Comparable) int {
 
 type compIntNoRep int
 
-func (ci compIntNoRep) Compare(i Comparable) int {
-	c := int(ci) - int(i.(compIntNoRep))
+func (ci compIntNoRep) Compare(i Comparable) (c int) {
+	switch i := i.(type) {
+	case compIntNoRep:
+		c = int(ci) - int(i)
+	case compInt:
+		c = int(ci) - int(i)
+	}
 	if c == 0 {
 		return 1
 	}
