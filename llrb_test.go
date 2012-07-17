@@ -130,6 +130,39 @@ func (cr compRune) Compare(r Comparable) int {
 	return int(cr) - int(r.(compRune))
 }
 
+type compInt int
+
+func (ci compInt) Compare(i Comparable) int {
+	return int(ci) - int(i.(compInt))
+}
+
+type compIntUpper int
+
+func (ci compIntUpper) Compare(i Comparable) (c int) {
+	switch i := i.(type) {
+	case compIntUpper:
+		c = int(ci) - int(i)
+	case compInt:
+		c = int(ci) - int(i)
+	}
+	if c == 0 {
+		return 1
+	}
+	return c
+}
+
+type Reverse struct {
+	sort.Interface
+}
+
+func (r Reverse) Less(i, j int) bool { return r.Interface.Less(j, i) }
+
+type compInts []compInt
+
+func (c compInts) Len() int           { return len(c) }
+func (c compInts) Less(i, j int) bool { return c[i].Compare(c[j]) < 0 }
+func (c compInts) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+
 // Build a tree from a simplified Newick format returning the root node.
 // Single letter node names only, no error checking and all nodes are full or leaf.
 func makeTree(desc string) (n *Node) {
@@ -418,12 +451,12 @@ func (s *S) TestUpper(c *check.C) {
 	}
 	for i := min; i < max-1; i++ {
 		if i&1 == 1 {
-			c.Check(t.Ceil(compIntNoRep(i)), check.Equals, compInt(i+2)) // Check odd Uppers are the next odd.
+			c.Check(t.Ceil(compIntUpper(i)), check.Equals, compInt(i+2)) // Check odd Uppers are the next odd.
 		} else {
-			c.Check(t.Ceil(compIntNoRep(i)), check.Equals, compInt(i+1)) // Check even Uppers are the next number.
+			c.Check(t.Ceil(compIntUpper(i)), check.Equals, compInt(i+1)) // Check even Uppers are the next number.
 		}
 	}
-	c.Check(t.Ceil(compIntNoRep(max+1)), check.Equals, Comparable(nil))
+	c.Check(t.Ceil(compIntUpper(max+1)), check.Equals, Comparable(nil))
 }
 
 func (s *S) TestRandomlyInsertedGet(c *check.C) {
@@ -756,39 +789,7 @@ func dotFile(t *Tree, label, dotString string) (err error) {
 	return
 }
 
-type compInt int
-
-func (ci compInt) Compare(i Comparable) int {
-	return int(ci) - int(i.(compInt))
-}
-
-type compIntNoRep int
-
-func (ci compIntNoRep) Compare(i Comparable) (c int) {
-	switch i := i.(type) {
-	case compIntNoRep:
-		c = int(ci) - int(i)
-	case compInt:
-		c = int(ci) - int(i)
-	}
-	if c == 0 {
-		return 1
-	}
-	return c
-}
-
-type Reverse struct {
-	sort.Interface
-}
-
-func (r Reverse) Less(i, j int) bool { return r.Interface.Less(j, i) }
-
-type compInts []compInt
-
-func (c compInts) Len() int           { return len(c) }
-func (c compInts) Less(i, j int) bool { return c[i].Compare(c[j]) < 0 }
-func (c compInts) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
-
+// Test values for range methods.
 var values = compInts{-10, -32, 100, 46, 239, 2349, 101, 0, 1}
 
 func (s *S) TestDo(c *check.C) {
@@ -920,7 +921,7 @@ func BenchmarkInsert(b *testing.B) {
 func BenchmarkInsertNoRep(b *testing.B) {
 	t := &Tree{}
 	for i := 0; i < b.N; i++ {
-		t.Insert(compIntNoRep(b.N - i))
+		t.Insert(compIntUpper(b.N - i))
 	}
 }
 

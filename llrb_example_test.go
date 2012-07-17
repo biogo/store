@@ -21,26 +21,26 @@ import (
 )
 
 type (
-	CompInt     int
-	CompIntNoEq int
+	Int           int
+	IntUpperBound int
 )
 
-func (c CompInt) Compare(b llrb.Comparable) int {
+func (c Int) Compare(b llrb.Comparable) int {
 	switch i := b.(type) {
-	case CompInt:
+	case Int:
 		return int(c) - int(i)
-	case CompIntNoEq:
+	case IntUpperBound:
 		return int(c) - int(i)
 	}
 	panic("unknown type")
 }
 
-func (c CompIntNoEq) Compare(b llrb.Comparable) int {
+func (c IntUpperBound) Compare(b llrb.Comparable) int {
 	var d int
 	switch i := b.(type) {
-	case CompInt:
+	case Int:
 		d = int(c) - int(i)
-	case CompIntNoEq:
+	case IntUpperBound:
 		d = int(c) - int(i)
 	}
 	if d == 0 {
@@ -56,15 +56,15 @@ func Example() {
 	{
 		t := &llrb.Tree{}
 		for _, v := range values {
-			t.Insert(CompInt(v)) // Insert with replacement.
+			t.Insert(Int(v)) // Insert with replacement.
 		}
 
 		results := []int(nil)
-		// More efficiently retrieved using Get(Compint(3))...
+		// More efficiently retrieved using Get(Int(3))...
 		t.DoMatching(func(c llrb.Comparable) (done bool) {
-			results = append(results, int(c.(CompInt)))
+			results = append(results, int(c.(Int)))
 			return
-		}, CompInt(3))
+		}, Int(3))
 
 		fmt.Println("With replacement:   ", results)
 	}
@@ -73,14 +73,14 @@ func Example() {
 	{
 		t := &llrb.Tree{}
 		for _, v := range values {
-			t.Insert(CompIntNoEq(v)) // Insert without replacement.
+			t.Insert(IntUpperBound(v)) // Insert without replacement.
 		}
 
 		results := []int(nil)
 		t.DoMatching(func(c llrb.Comparable) (done bool) {
-			results = append(results, int(c.(CompIntNoEq)))
+			results = append(results, int(c.(IntUpperBound)))
 			return
-		}, CompInt(3))
+		}, Int(3))
 
 		fmt.Println("Without replacement:", results)
 	}
@@ -94,14 +94,14 @@ func Example() {
 	values := []int{0, 1, 2, 3, 4, 2, 3, 5, 5, 65, 32, 3, 23}
 	t := &Tree{}
 	for _, v := range values {
-		t.Insert(CompInt(v)) // Insert with replacement.
+		t.Insert(Int(v)) // Insert with replacement.
 	}
 
 	results := []int(nil)
 	t.DoMatching(func(c Comparable) (done bool) {
-		results = append(results, int(c.(CompInt)))
+		results = append(results, int(c.(Int)))
 		return
-	}, CompInt(3))
+	}, Int(3))
 
 	fmt.Println(results)
 	// Output:
