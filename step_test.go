@@ -18,6 +18,7 @@ package step
 import (
 	"fmt"
 	check "launchpad.net/gocheck"
+	"math/rand"
 	"reflect"
 	"testing"
 )
@@ -819,4 +820,50 @@ func (s *S) TestMutateRange(c *check.C) {
 		c.Check(sv.ApplyRange(t.mutate, t.from, t.to), check.DeepEquals, t.err)
 		c.Check(sv.String(), check.Equals, t.expect, check.Commentf("subtest %d", i))
 	}
+}
+
+// Benchmarks
+
+func applyRange(b *testing.B, coverage float64) {
+	b.StopTimer()
+	var (
+		length = 100
+		start  = 0
+		end    = int(float64(b.N)/coverage) / length
+		zero   = 0
+		pool   = make([]int, b.N)
+	)
+	if end == 0 {
+		return
+	}
+	sv, _ := New(start, end, zero)
+	for i := 0; i < b.N; i++ {
+		pool[i] = rand.Intn(end)
+	}
+	b.StartTimer()
+	for _, r := range pool {
+		sv.ApplyRange(IncInt, r, r+length)
+	}
+}
+
+func BenchmarkApplyRangeXDense(b *testing.B) {
+	applyRange(b, 1000)
+}
+func BenchmarkApplyRangeVDense(b *testing.B) {
+	applyRange(b, 100)
+}
+func BenchmarkApplyRangeDense(b *testing.B) {
+	applyRange(b, 10)
+}
+func BenchmarkApplyRangeUnity(b *testing.B) {
+	applyRange(b, 1)
+}
+func BenchmarkApplyRangeSparse(b *testing.B) {
+	applyRange(b, 0.1)
+}
+func BenchmarkApplyRangeVSparse(b *testing.B) {
+	applyRange(b, 0.01)
+}
+func BenchmarkApplyRangeXSparse(b *testing.B) {
+	applyRange(b, 0.001)
 }
