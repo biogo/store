@@ -23,7 +23,6 @@ import (
 	"code.google.com/p/biogo.llrb"
 	"errors"
 	"fmt"
-	"reflect"
 )
 
 var (
@@ -35,7 +34,7 @@ var (
 type (
 	position struct {
 		pos int
-		val interface{} // This must be able to be compared by reflect.DeepEqual
+		val Equaler
 	}
 	query int
 	upper int
@@ -61,11 +60,16 @@ func (q upper) Compare(c llrb.Comparable) (d int) {
 	return
 }
 
+// An Equaler is a type that can return whether it equals another Equaler.
+type Equaler interface {
+	Equal(Equaler) bool
+}
+
 // A Vector is type that support the storage of array type data in a run-length
 // encoding format.
 type Vector struct {
-	Zero     interface{} // Ground state for the step vector.
-	Relaxed  bool        // If true, dynamic vector resize is allowed.
+	Zero     Equaler // Ground state for the step vector.
+	Relaxed  bool    // If true, dynamic vector resize is allowed.
 	t        *llrb.Tree
 	min, max *position
 }
@@ -74,7 +78,7 @@ type Vector struct {
 // and the ground state defined by zero. The Vector's extent is mutable
 // if the Relaxed field is set to true. If a zero length vector is requested
 // an error is returned.
-func New(start, end int, zero interface{}) (v *Vector, err error) {
+func New(start, end int, zero Equaler) (v *Vector, err error) {
 	if start >= end {
 		return nil, ErrZeroLength
 	}
@@ -111,7 +115,7 @@ func (self *Vector) Count() int { return self.t.Len() - 1 }
 
 // At returns the value of the vector at position i. If i is outside the extent
 // of the vector an error is returned.
-func (self *Vector) At(i int) (v interface{}, err error) {
+func (self *Vector) At(i int) (v Equaler, err error) {
 	if i < self.Start() || i >= self.End() {
 		return nil, ErrOutOfRange
 	}
@@ -121,7 +125,7 @@ func (self *Vector) At(i int) (v interface{}, err error) {
 
 // StepAt returns the value and range of the step at i, where start <= i < end.
 // If i is outside the extent of the vector, an error is returned.
-func (self *Vector) StepAt(i int) (v interface{}, start, end int, err error) {
+func (self *Vector) StepAt(i int) (v Equaler, start, end int, err error) {
 	if i < self.Start() || i >= self.End() {
 		return nil, 0, 0, ErrOutOfRange
 	}
@@ -131,8 +135,7 @@ func (self *Vector) StepAt(i int) (v interface{}, start, end int, err error) {
 }
 
 // Set sets the value of position i to v.
-// The underlying type of v must be comparable by reflect.DeepEqual.
-func (self *Vector) Set(i int, v interface{}) {
+func (self *Vector) Set(i int, v Equaler) {
 	if i < self.min.pos || self.max.pos <= i {
 		if !self.Relaxed {
 			panic(ErrOutOfRange)
@@ -140,20 +143,20 @@ func (self *Vector) Set(i int, v interface{}) {
 
 		if i < self.min.pos {
 			if i == self.min.pos-1 {
-				if reflect.DeepEqual(v, self.min.val) {
+				if v.Equal(self.min.val) {
 					self.min.pos--
 				} else {
 					self.min = &position{pos: i, val: v}
 					self.t.Insert(self.min)
 				}
 			} else {
-				if reflect.DeepEqual(self.min.val, self.Zero) {
+				if self.min.val.Equal(self.Zero) {
 					self.min.pos = i + 1
 				} else {
 					self.min = &position{pos: i + 1, val: self.Zero}
 					self.t.Insert(self.min)
 				}
-				if reflect.DeepEqual(v, self.Zero) {
+				if v.Equal(self.Zero) {
 					self.min.pos--
 				} else {
 					self.min = &position{pos: i, val: v}
@@ -164,17 +167,17 @@ func (self *Vector) Set(i int, v interface{}) {
 			if i == self.max.pos {
 				self.max.pos++
 				prev := self.t.Floor(query(i)).(*position)
-				if !reflect.DeepEqual(v, prev.val) {
+				if !v.Equal(prev.val) {
 					self.t.Insert(&position{pos: i, val: v})
 				}
 			} else {
 				mpos := self.max.pos
 				self.max.pos = i + 1
 				prev := self.t.Floor(query(i)).(*position)
-				if !reflect.DeepEqual(prev.val, self.Zero) {
+				if !prev.val.Equal(self.Zero) {
 					self.t.Insert(&position{pos: mpos, val: self.Zero})
 				}
-				if !reflect.DeepEqual(v, self.Zero) {
+				if !v.Equal(self.Zero) {
 					self.t.Insert(&position{pos: i, val: v})
 				}
 			}
@@ -183,14 +186,14 @@ func (self *Vector) Set(i int, v interface{}) {
 	}
 
 	lo := self.t.Floor(query(i)).(*position)
-	if reflect.DeepEqual(v, lo.val) {
+	if v.Equal(lo.val) {
 		return
 	}
 	hi := self.t.Ceil(upper(i)).(*position)
 
 	if lo.pos == i {
 		if hi.pos == i+1 {
-			if reflect.DeepEqual(v, hi.val) {
+			if hi != self.max && v.Equal(hi.val) {
 				self.t.Delete(query(i))
 				hi.pos--
 			} else {
@@ -198,7 +201,7 @@ func (self *Vector) Set(i int, v interface{}) {
 			}
 			if i > self.min.pos {
 				prev := self.t.Floor(query(i - 1)).(*position)
-				if reflect.DeepEqual(v, prev.val) {
+				if v.Equal(prev.val) {
 					self.t.Delete(query(i))
 				}
 			}
@@ -208,13 +211,13 @@ func (self *Vector) Set(i int, v interface{}) {
 			if prev == nil {
 				self.min = &position{pos: i, val: v}
 				self.t.Insert(self.min)
-			} else if !reflect.DeepEqual(v, prev.(*position).val) {
+			} else if !v.Equal(prev.(*position).val) {
 				self.t.Insert(&position{pos: i, val: v})
 			}
 		}
 	} else {
 		if hi.pos == i+1 {
-			if reflect.DeepEqual(v, hi.val) {
+			if hi != self.max && v.Equal(hi.val) {
 				hi.pos--
 			} else {
 				self.t.Insert(&position{pos: i, val: v})
@@ -228,7 +231,7 @@ func (self *Vector) Set(i int, v interface{}) {
 
 // SetRange sets the value of positions [start, end) to v.
 // The underlying type of v must be comparable by reflect.DeepEqual.
-func (self *Vector) SetRange(start, end int, v interface{}) {
+func (self *Vector) SetRange(start, end int, v Equaler) {
 	l := end - start
 	switch {
 	case l == 0:
@@ -247,20 +250,20 @@ func (self *Vector) SetRange(start, end int, v interface{}) {
 
 		if end <= self.min.pos {
 			if end == self.min.pos {
-				if reflect.DeepEqual(v, self.min.val) {
+				if v.Equal(self.min.val) {
 					self.min.pos -= l
 				} else {
 					self.min = &position{pos: start, val: v}
 					self.t.Insert(self.min)
 				}
 			} else {
-				if reflect.DeepEqual(self.min.val, self.Zero) {
+				if self.min.val.Equal(self.Zero) {
 					self.min.pos = end
 				} else {
 					self.min = &position{pos: end, val: self.Zero}
 					self.t.Insert(self.min)
 				}
-				if reflect.DeepEqual(v, self.Zero) {
+				if v.Equal(self.Zero) {
 					self.min.pos -= l
 				} else {
 					self.min = &position{pos: start, val: v}
@@ -271,17 +274,17 @@ func (self *Vector) SetRange(start, end int, v interface{}) {
 			if start == self.max.pos {
 				self.max.pos += l
 				prev := self.t.Floor(query(start)).(*position)
-				if !reflect.DeepEqual(v, prev.val) {
+				if !v.Equal(prev.val) {
 					self.t.Insert(&position{pos: start, val: v})
 				}
 			} else {
 				mpos := self.max.pos
 				self.max.pos = end
 				prev := self.t.Floor(query(start)).(*position)
-				if !reflect.DeepEqual(prev.val, self.Zero) {
+				if !prev.val.Equal(self.Zero) {
 					self.t.Insert(&position{pos: mpos, val: self.Zero})
 				}
-				if !reflect.DeepEqual(v, self.Zero) {
+				if !v.Equal(self.Zero) {
 					self.t.Insert(&position{pos: start, val: v})
 				}
 			}
@@ -313,9 +316,9 @@ func (self *Vector) SetRange(start, end int, v interface{}) {
 		var prevSame bool
 		prev := self.t.Floor(query(start - 1))
 		if prev != nil {
-			prevSame = reflect.DeepEqual(v, prev.(*position).val)
+			prevSame = v.Equal(prev.(*position).val)
 		}
-		hiSame := reflect.DeepEqual(v, hi.val)
+		hiSame := hi != self.max && v.Equal(hi.val)
 		if hi.pos == end {
 			switch {
 			case hiSame && prevSame:
@@ -334,7 +337,7 @@ func (self *Vector) SetRange(start, end int, v interface{}) {
 			}
 		} else {
 			la.pos = end
-			if !reflect.DeepEqual(v, la.val) {
+			if !v.Equal(la.val) {
 				self.t.Insert(la)
 			}
 			if prev == nil {
@@ -346,7 +349,7 @@ func (self *Vector) SetRange(start, end int, v interface{}) {
 		}
 	} else {
 		if hi.pos == end {
-			if reflect.DeepEqual(v, hi.val) {
+			if v.Equal(hi.val) {
 				hi.pos = start
 			} else {
 				self.t.Insert(&position{pos: start, val: v})
@@ -354,7 +357,7 @@ func (self *Vector) SetRange(start, end int, v interface{}) {
 		} else {
 			self.t.Insert(&position{pos: start, val: v})
 			la.pos = end
-			if !reflect.DeepEqual(v, la.val) {
+			if !v.Equal(la.val) {
 				self.t.Insert(la)
 			}
 		}
@@ -363,7 +366,7 @@ func (self *Vector) SetRange(start, end int, v interface{}) {
 
 // Do performs the function fn on steps stored in the Vector in ascending sort order
 // of start position. fn is passed the start, end and value of the step.
-func (self *Vector) Do(fn func(start, end int, v interface{})) {
+func (self *Vector) Do(fn func(start, end int, v Equaler)) {
 	var (
 		la  *position
 		min = self.min.pos
@@ -382,7 +385,7 @@ func (self *Vector) Do(fn func(start, end int, v interface{})) {
 // Do performs the function fn on steps stored in the Vector over the range [from, to)
 // in ascending sort order of start position. fn is passed the start, end and value of
 // the step.
-func (self *Vector) DoRange(fn func(start, end int, v interface{}), from, to int) (err error) {
+func (self *Vector) DoRange(fn func(start, end int, v Equaler), from, to int) (err error) {
 	if to < from {
 		return ErrInvertedRange
 	}
@@ -422,16 +425,37 @@ var (
 	DecFloat = decFloat // Decrement a float64 value.
 )
 
-func incInt(v interface{}) interface{}   { return v.(int) + 1 }
-func decInt(v interface{}) interface{}   { return v.(int) - 1 }
-func incFloat(v interface{}) interface{} { return v.(float64) + 1 }
-func decFloat(v interface{}) interface{} { return v.(float64) - 1 }
+// An Int is an int type satisfying the Equaler interface.
+type Int int
+
+// Equal returns whether i equals e. Equal assumes the underlying type of e is Int.
+func (i Int) Equal(e Equaler) bool {
+	return i == e.(Int)
+}
+
+// A Float is a float64 type satisfying the Equaler interface.
+type Float float64
+
+// Equal returns whether f equals e. For the purposes of the step package here, NaN == NaN
+// evaluates to true. Equal assumes the underlying type of e is Float.
+func (f Float) Equal(e Equaler) bool {
+	ef := e.(Float)
+	if f != f && ef != ef { // For our purposes NaN == NaN.
+		return true
+	}
+	return f == ef
+}
+
+func incInt(v Equaler) Equaler   { return v.(Int) + 1 }
+func decInt(v Equaler) Equaler   { return v.(Int) - 1 }
+func incFloat(v Equaler) Equaler { return v.(Float) + 1 }
+func decFloat(v Equaler) Equaler { return v.(Float) - 1 }
 
 // Apply applies the mutator function m to steps stored in the Vector in ascending sort order
 // of start position. Redundant steps resulting from changes in step values are erased.
-func (self *Vector) Apply(m func(interface{}) interface{}) {
+func (self *Vector) Apply(m func(Equaler) Equaler) {
 	var (
-		la   interface{}
+		la   Equaler
 		min  = self.min.pos
 		max  = self.max.pos
 		delQ []query
@@ -443,7 +467,7 @@ func (self *Vector) Apply(m func(interface{}) interface{}) {
 			return true
 		}
 		p.val = m(p.val)
-		if p.pos != min && p.pos != max && reflect.DeepEqual(p.val, la) {
+		if p.pos != min && p.pos != max && p.val.Equal(la) {
 			delQ = append(delQ, query(p.pos))
 		}
 		la = p.val
@@ -458,12 +482,12 @@ func (self *Vector) Apply(m func(interface{}) interface{}) {
 // Apply applies the mutator function m to steps stored in the Vector in over the range
 // [from, to) in ascending sort order of start position. Redundant steps resulting from
 // changes in step values are erased.
-func (self *Vector) ApplyRange(m func(interface{}) interface{}, from, to int) (err error) {
+func (self *Vector) ApplyRange(m func(Equaler) Equaler, from, to int) (err error) {
 	if to < from {
 		return ErrInvertedRange
 	}
 	var (
-		la   interface{}
+		la   Equaler
 		old  position
 		min  = self.min.pos
 		max  = self.max.pos
@@ -481,7 +505,7 @@ func (self *Vector) ApplyRange(m func(interface{}) interface{}, from, to int) (e
 		self.SetRange(from, to, la)
 		return
 	}
-	if !reflect.DeepEqual(la, old.val) {
+	if !la.Equal(old.val) {
 		self.t.Insert(&position{from, la})
 	}
 	self.t.DoRange(func(c llrb.Comparable) (done bool) {
@@ -491,7 +515,7 @@ func (self *Vector) ApplyRange(m func(interface{}) interface{}, from, to int) (e
 		}
 		old = *p // Needed for fix-up of last step if to is not at a step boundary.
 		p.val = m(p.val)
-		if p.pos != min && reflect.DeepEqual(p.val, la) {
+		if p.pos != min && p.val.Equal(la) {
 			delQ = append(delQ, query(p.pos))
 		}
 		la = p.val
@@ -500,9 +524,9 @@ func (self *Vector) ApplyRange(m func(interface{}) interface{}, from, to int) (e
 
 	if to < max {
 		p := self.t.Ceil(query(to)).(*position)
-		if p.pos > to && !reflect.DeepEqual(p.val, old.val) {
+		if p.pos > to && (p == self.max || !p.val.Equal(old.val)) {
 			self.t.Insert(&position{pos: to, val: old.val})
-		} else if reflect.DeepEqual(p.val, la) {
+		} else if p.val.Equal(la) {
 			delQ = append(delQ, query(p.pos))
 		}
 	}

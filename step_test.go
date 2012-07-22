@@ -30,21 +30,27 @@ type S struct{}
 
 var _ = check.Suite(&S{})
 
+type nilable int
+
+func (n *nilable) Equal(e Equaler) bool {
+	return n == e.(*nilable)
+}
+
 func (s *S) TestCreate(c *check.C) {
 	_, err := New(0, 0, nil)
 	c.Check(err, check.ErrorMatches, ErrZeroLength.Error())
 	for _, vec := range []struct {
 		start, end int
-		zero       interface{}
+		zero       Equaler
 	}{
-		{1, 10, nil},
-		{0, 10, nil},
-		{-1, 100, nil},
-		{-100, -10, nil},
-		{1, 10, 0},
-		{0, 10, 0},
-		{-1, 100, 0},
-		{-100, -10, 0},
+		{1, 10, (*nilable)(nil)},
+		{0, 10, (*nilable)(nil)},
+		{-1, 100, (*nilable)(nil)},
+		{-100, -10, (*nilable)(nil)},
+		{1, 10, Int(0)},
+		{0, 10, Int(0)},
+		{-1, 100, Int(0)},
+		{-100, -10, Int(0)},
 	} {
 		sv, err := New(vec.start, vec.end, vec.zero)
 		c.Assert(err, check.Equals, nil)
@@ -52,7 +58,7 @@ func (s *S) TestCreate(c *check.C) {
 		c.Check(sv.End(), check.Equals, vec.end)
 		c.Check(sv.Len(), check.Equals, vec.end-vec.start)
 		c.Check(sv.Zero, check.DeepEquals, vec.zero)
-		var at interface{}
+		var at Equaler
 		for i := vec.start; i < vec.end; i++ {
 			at, err = sv.At(i)
 			c.Check(at, check.DeepEquals, vec.zero)
@@ -68,38 +74,38 @@ func (s *S) TestCreate(c *check.C) {
 func (s *S) TestSet_1(c *check.C) {
 	for i, t := range []struct {
 		start, end int
-		zero       interface{}
+		zero       Equaler
 		sets       []position
 		expect     string
 	}{
-		{1, 10, 0,
+		{1, 10, Int(0),
 			[]position{
-				{1, 2},
-				{2, 3},
-				{3, 3},
-				{4, 3},
-				{5, 2},
+				{1, Int(2)},
+				{2, Int(3)},
+				{3, Int(3)},
+				{4, Int(3)},
+				{5, Int(2)},
 			},
 			"[1:2 2:3 5:2 6:0 10:<nil>]",
 		},
-		{1, 10, 0,
+		{1, 10, Int(0),
 			[]position{
-				{3, 3},
-				{4, 3},
-				{1, 2},
-				{2, 3},
-				{5, 2},
+				{3, Int(3)},
+				{4, Int(3)},
+				{1, Int(2)},
+				{2, Int(3)},
+				{5, Int(2)},
 			},
 			"[1:2 2:3 5:2 6:0 10:<nil>]",
 		},
-		{1, 10, 0,
+		{1, 10, Int(0),
 			[]position{
-				{3, 3},
-				{4, 3},
-				{5, 2},
-				{1, 2},
-				{2, 3},
-				{9, 2},
+				{3, Int(3)},
+				{4, Int(3)},
+				{5, Int(2)},
+				{1, Int(2)},
+				{2, Int(3)},
+				{9, Int(2)},
 			},
 			"[1:2 2:3 5:2 6:0 9:2 10:<nil>]",
 		},
@@ -116,8 +122,8 @@ func (s *S) TestSet_1(c *check.C) {
 		}
 		c.Check(sv.String(), check.Equals, t.expect, check.Commentf("subtest %d", i))
 		sv.Relaxed = true
-		sv.Set(t.start-1, nil)
-		sv.Set(t.end, nil)
+		sv.Set(t.start-1, sv.Zero)
+		sv.Set(t.end, sv.Zero)
 		c.Check(sv.Len(), check.Equals, t.end-t.start+2)
 		for _, v := range t.sets {
 			sv.Set(v.pos, t.zero)
@@ -132,63 +138,63 @@ func (s *S) TestSet_1(c *check.C) {
 func (s *S) TestSet_2(c *check.C) {
 	for i, t := range []struct {
 		start, end int
-		zero       interface{}
+		zero       Equaler
 		sets       []position
 		expect     string
 		count      int
 	}{
-		{1, 2, 0,
+		{1, 2, Int(0),
 			[]position{
-				{1, 2},
-				{2, 3},
-				{3, 3},
-				{4, 3},
-				{5, 2},
-				{-1, 5},
-				{10, 23},
+				{1, Int(2)},
+				{2, Int(3)},
+				{3, Int(3)},
+				{4, Int(3)},
+				{5, Int(2)},
+				{-1, Int(5)},
+				{10, Int(23)},
 			},
 			"[-1:5 0:0 1:2 2:3 5:2 6:0 10:23 11:<nil>]",
 			7,
 		},
-		{1, 10, 0,
+		{1, 10, Int(0),
 			[]position{
-				{0, 0},
+				{0, Int(0)},
 			},
 			"[0:0 10:<nil>]",
 			1,
 		},
-		{1, 10, 0,
+		{1, 10, Int(0),
 			[]position{
-				{-1, 0},
+				{-1, Int(0)},
 			},
 			"[-1:0 10:<nil>]",
 			1,
 		},
-		{1, 10, 0,
+		{1, 10, Int(0),
 			[]position{
-				{11, 0},
+				{11, Int(0)},
 			},
 			"[1:0 12:<nil>]",
 			1,
 		},
-		{1, 10, 0,
+		{1, 10, Int(0),
 			[]position{
-				{2, 1},
-				{3, 1},
-				{4, 1},
-				{5, 1},
-				{6, 1},
-				{7, 1},
-				{8, 1},
-				{5, 1},
+				{2, Int(1)},
+				{3, Int(1)},
+				{4, Int(1)},
+				{5, Int(1)},
+				{6, Int(1)},
+				{7, Int(1)},
+				{8, Int(1)},
+				{5, Int(1)},
 			},
 			"[1:0 2:1 9:0 10:<nil>]",
 			3,
 		},
-		{1, 10, 0,
+		{1, 10, Int(0),
 			[]position{
-				{3, 1},
-				{2, 1},
+				{3, Int(1)},
+				{2, Int(1)},
 			},
 			"[1:0 2:1 4:0 10:<nil>]",
 			3,
@@ -208,11 +214,11 @@ func (s *S) TestSet_2(c *check.C) {
 func (s *S) TestSetRange_1(c *check.C) {
 	type posRange struct {
 		start, end int
-		val        interface{}
+		val        Int
 	}
 	for i, t := range []struct {
 		start, end int
-		zero       interface{}
+		zero       Int
 		sets       []posRange
 		expect     string
 		count      int
@@ -286,8 +292,8 @@ func (s *S) TestSetRange_1(c *check.C) {
 		c.Check(sv.String(), check.Equals, t.expect, check.Commentf("subtest %d", i))
 		c.Check(sv.Count(), check.Equals, t.count)
 		sv.Relaxed = true
-		sv.SetRange(t.start-1, t.start, nil)
-		sv.SetRange(t.end, t.end+1, nil)
+		sv.SetRange(t.start-1, t.start, sv.Zero)
+		sv.SetRange(t.end, t.end+1, sv.Zero)
 		c.Check(sv.Len(), check.Equals, t.end-t.start+2)
 		sv.SetRange(t.start-1, t.end+1, t.zero)
 		c.Check(sv.t.Len(), check.Equals, 2)
@@ -300,11 +306,11 @@ func (s *S) TestSetRange_2(c *check.C) {
 	c.Check(func() { sv.SetRange(1, 0, nil) }, check.Panics, ErrInvertedRange)
 	type posRange struct {
 		start, end int
-		val        interface{}
+		val        Int
 	}
 	for i, t := range []struct {
 		start, end int
-		zero       interface{}
+		zero       Int
 		sets       []posRange
 		expect     string
 	}{
@@ -460,11 +466,11 @@ func (s *S) TestSetRange_2(c *check.C) {
 func (s *S) TestStepAt(c *check.C) {
 	type posRange struct {
 		start, end int
-		val        interface{}
+		val        Int
 	}
 	t := struct {
 		start, end int
-		zero       interface{}
+		zero       Int
 		sets       []posRange
 		expect     string
 	}{1, 10, 0,
@@ -509,14 +515,14 @@ func (s *S) TestDo(c *check.C) {
 	var data interface{}
 	type posRange struct {
 		start, end int
-		val        interface{}
+		val        Int
 	}
 	for i, t := range []struct {
 		start, end int
-		zero       interface{}
+		zero       Int
 		sets       []posRange
 		setup      func()
-		fn         func(start, end int, v interface{})
+		fn         func(start, end int, v Equaler)
 		expect     interface{}
 	}{
 		{1, 10, 0,
@@ -526,16 +532,16 @@ func (s *S) TestDo(c *check.C) {
 				{7, 8, 2},
 				{9, 10, 4},
 			},
-			func() { data = []int(nil) },
-			func(start, end int, vi interface{}) {
-				sl := data.([]int)
-				v := vi.(int)
+			func() { data = []Int(nil) },
+			func(start, end int, vi Equaler) {
+				sl := data.([]Int)
+				v := vi.(Int)
 				for i := start; i < end; i++ {
 					sl = append(sl, v)
 				}
 				data = sl
 			},
-			[]int{3, 3, 0, 1, 0, 0, 2, 0, 4},
+			[]Int{3, 3, 0, 1, 0, 0, 2, 0, 4},
 		},
 	} {
 		t.setup()
@@ -554,14 +560,14 @@ func (s *S) TestDoRange(c *check.C) {
 	var data interface{}
 	type posRange struct {
 		start, end int
-		val        interface{}
+		val        Int
 	}
 	for i, t := range []struct {
 		start, end int
-		zero       interface{}
+		zero       Int
 		sets       []posRange
 		setup      func()
-		fn         func(start, end int, v interface{})
+		fn         func(start, end int, v Equaler)
 		from, to   int
 		expect     interface{}
 		err        error
@@ -573,17 +579,17 @@ func (s *S) TestDoRange(c *check.C) {
 				{7, 8, 2},
 				{9, 10, 4},
 			},
-			func() { data = []int(nil) },
-			func(start, end int, vi interface{}) {
-				sl := data.([]int)
-				v := vi.(int)
+			func() { data = []Int(nil) },
+			func(start, end int, vi Equaler) {
+				sl := data.([]Int)
+				v := vi.(Int)
 				for i := start; i < end; i++ {
 					sl = append(sl, v)
 				}
 				data = sl
 			},
 			2, 8,
-			[]int{3, 0, 1, 0, 0, 2},
+			[]Int{3, 0, 1, 0, 0, 2},
 			nil,
 		},
 		{1, 10, 0,
@@ -593,10 +599,10 @@ func (s *S) TestDoRange(c *check.C) {
 				{7, 8, 2},
 				{9, 10, 4},
 			},
-			func() { data = []int(nil) },
-			func(_, _ int, _ interface{}) {},
+			func() { data = []Int(nil) },
+			func(_, _ int, _ Equaler) {},
 			-2, -1,
-			[]int(nil),
+			[]Int(nil),
 			ErrOutOfRange,
 		},
 		{1, 10, 0,
@@ -606,10 +612,10 @@ func (s *S) TestDoRange(c *check.C) {
 				{7, 8, 2},
 				{9, 10, 4},
 			},
-			func() { data = []int(nil) },
-			func(_, _ int, _ interface{}) {},
+			func() { data = []Int(nil) },
+			func(_, _ int, _ Equaler) {},
 			10, 1,
-			[]int(nil),
+			[]Int(nil),
 			ErrInvertedRange,
 		},
 	} {
@@ -630,63 +636,63 @@ func (s *S) TestDoRange(c *check.C) {
 func (s *S) TestApply(c *check.C) {
 	type posRange struct {
 		start, end int
-		val        interface{}
+		val        Equaler
 	}
 	for i, t := range []struct {
 		start, end int
-		zero       interface{}
+		zero       Equaler
 		sets       []posRange
-		mutate     func(interface{}) interface{}
+		mutate     func(Equaler) Equaler
 		expect     string
 	}{
-		{1, 10, 0,
+		{1, 10, Int(0),
 			[]posRange{
-				{1, 3, 3},
-				{4, 5, 1},
-				{7, 8, 2},
-				{9, 10, 4},
+				{1, 3, Int(3)},
+				{4, 5, Int(1)},
+				{7, 8, Int(2)},
+				{9, 10, Int(4)},
 			},
 			IncInt,
 			"[1:4 3:1 4:2 5:1 7:3 8:1 9:5 10:<nil>]",
 		},
-		{1, 10, 0,
+		{1, 10, Int(0),
 			[]posRange{
-				{1, 3, 3},
-				{4, 5, 1},
-				{7, 8, 2},
-				{9, 10, 4},
+				{1, 3, Int(3)},
+				{4, 5, Int(1)},
+				{7, 8, Int(2)},
+				{9, 10, Int(4)},
 			},
 			DecInt,
 			"[1:2 3:-1 4:0 5:-1 7:1 8:-1 9:3 10:<nil>]",
 		},
-		{1, 10, 0.,
+		{1, 10, Float(0),
 			[]posRange{
-				{1, 3, 3.},
-				{4, 5, 1.},
-				{7, 8, 2.},
-				{9, 10, 4.},
+				{1, 3, Float(3)},
+				{4, 5, Float(1)},
+				{7, 8, Float(2)},
+				{9, 10, Float(4)},
 			},
 			IncFloat,
 			"[1:4 3:1 4:2 5:1 7:3 8:1 9:5 10:<nil>]",
 		},
-		{1, 10, 0.,
+		{1, 10, Float(0),
 			[]posRange{
-				{1, 3, 3.},
-				{4, 5, 1.},
-				{7, 8, 2.},
-				{9, 10, 4.},
+				{1, 3, Float(3)},
+				{4, 5, Float(1)},
+				{7, 8, Float(2)},
+				{9, 10, Float(4)},
 			},
 			DecFloat,
 			"[1:2 3:-1 4:0 5:-1 7:1 8:-1 9:3 10:<nil>]",
 		},
-		{1, 10, 0,
+		{1, 10, Int(0),
 			[]posRange{
-				{1, 3, 3},
-				{4, 5, 1},
-				{7, 8, 2},
-				{9, 10, 4},
+				{1, 3, Int(3)},
+				{4, 5, Int(1)},
+				{7, 8, Int(2)},
+				{9, 10, Int(4)},
 			},
-			func(_ interface{}) interface{} { return 0 },
+			func(_ Equaler) Equaler { return Int(0) },
 			"[1:0 10:<nil>]",
 		},
 	} {
@@ -703,13 +709,13 @@ func (s *S) TestApply(c *check.C) {
 func (s *S) TestMutateRange(c *check.C) {
 	type posRange struct {
 		start, end int
-		val        interface{}
+		val        Int
 	}
 	for i, t := range []struct {
 		start, end int
-		zero       interface{}
+		zero       Int
 		sets       []posRange
-		mutate     func(interface{}) interface{}
+		mutate     func(Equaler) Equaler
 		from, to   int
 		expect     string
 		err        error
@@ -755,7 +761,7 @@ func (s *S) TestMutateRange(c *check.C) {
 				{7, 8, 2},
 				{9, 10, 4},
 			},
-			func(_ interface{}) interface{} { return 0 },
+			func(_ Equaler) Equaler { return Int(0) },
 			2, 8,
 			"[1:3 2:0 9:4 10:<nil>]",
 			nil,
@@ -777,9 +783,9 @@ func (s *S) TestMutateRange(c *check.C) {
 				{10, 15, 2},
 				{15, 20, 3},
 			},
-			func(v interface{}) interface{} {
-				if v.(int) == 3 {
-					return 1
+			func(v Equaler) Equaler {
+				if v.Equal(Int(3)) {
+					return Int(1)
 				}
 				return v
 			},
@@ -830,7 +836,7 @@ func applyRange(b *testing.B, coverage float64) {
 		length = 100
 		start  = 0
 		end    = int(float64(b.N)/coverage) / length
-		zero   = 0
+		zero   = Int(0)
 		pool   = make([]int, b.N)
 	)
 	if end == 0 {
