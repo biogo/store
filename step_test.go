@@ -896,3 +896,50 @@ func BenchmarkApplyRangeVSparse(b *testing.B) {
 func BenchmarkApplyRangeXSparse(b *testing.B) {
 	applyRange(b, 0.001)
 }
+
+func atFunc(b *testing.B, coverage float64) {
+	b.StopTimer()
+	var (
+		length = 100
+		start  = 0
+		end    = int(float64(b.N)/coverage) / length
+		zero   = Int(0)
+	)
+	if end == 0 {
+		return
+	}
+	sv, _ := New(start, end, zero)
+	for i := 0; i < b.N; i++ {
+		r := rand.Intn(end)
+		sv.ApplyRange(r, r+length, IncInt)
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := sv.At(rand.Intn(end))
+		if err != nil {
+			panic("cannot reach")
+		}
+	}
+}
+
+func BenchmarkAtXDense(b *testing.B) {
+	atFunc(b, 1000)
+}
+func BenchmarkAtVDense(b *testing.B) {
+	atFunc(b, 100)
+}
+func BenchmarkAtDense(b *testing.B) {
+	atFunc(b, 10)
+}
+func BenchmarkAtUnity(b *testing.B) {
+	atFunc(b, 1)
+}
+func BenchmarkAtSparse(b *testing.B) {
+	atFunc(b, 0.1)
+}
+func BenchmarkAtVSparse(b *testing.B) {
+	atFunc(b, 0.01)
+}
+func BenchmarkAtXSparse(b *testing.B) {
+	atFunc(b, 0.001)
+}
