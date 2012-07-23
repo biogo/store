@@ -491,13 +491,13 @@ func (s *S) TestStepAt(c *check.C) {
 	c.Check(sv.String(), check.Equals, t.expect)
 	for i, v := range t.sets {
 		for j := v.start; j < v.end; j++ {
-			at, st, en, err := sv.StepAt(v.start)
+			st, en, at, err := sv.StepAt(v.start)
 			c.Check(err, check.Equals, nil)
 			c.Check(at, check.DeepEquals, v.val)
 			c.Check(st, check.Equals, v.start)
 			c.Check(en, check.Equals, v.end)
 		}
-		at, st, en, err := sv.StepAt(v.end)
+		st, en, at, err := sv.StepAt(v.end)
 		if v.end < sv.End() {
 			c.Check(err, check.Equals, nil)
 			c.Check(at, check.DeepEquals, sv.Zero)
@@ -625,7 +625,7 @@ func (s *S) TestDoRange(c *check.C) {
 		for _, v := range t.sets {
 			sv.SetRange(v.start, v.end, v.val)
 		}
-		c.Check(sv.DoRange(t.fn, t.from, t.to), check.DeepEquals, t.err)
+		c.Check(sv.DoRange(t.from, t.to, t.fn), check.DeepEquals, t.err)
 		c.Check(data, check.DeepEquals, t.expect, check.Commentf("subtest %d", i))
 		if t.from <= t.to && t.from < sv.End() && t.to > sv.Start() {
 			c.Check(reflect.ValueOf(data).Len(), check.Equals, t.to-t.from)
@@ -823,7 +823,7 @@ func (s *S) TestMutateRange(c *check.C) {
 		for _, v := range t.sets {
 			sv.SetRange(v.start, v.end, v.val)
 		}
-		c.Check(sv.ApplyRange(t.mutate, t.from, t.to), check.DeepEquals, t.err)
+		c.Check(sv.ApplyRange(t.from, t.to, t.mutate), check.DeepEquals, t.err)
 		c.Check(sv.String(), check.Equals, t.expect, check.Commentf("subtest %d", i))
 	}
 }
@@ -848,7 +848,7 @@ func applyRange(b *testing.B, coverage float64) {
 	}
 	b.StartTimer()
 	for _, r := range pool {
-		sv.ApplyRange(IncInt, r, r+length)
+		sv.ApplyRange(r, r+length, IncInt)
 	}
 }
 

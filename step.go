@@ -125,13 +125,13 @@ func (self *Vector) At(i int) (v Equaler, err error) {
 
 // StepAt returns the value and range of the step at i, where start <= i < end.
 // If i is outside the extent of the vector, an error is returned.
-func (self *Vector) StepAt(i int) (v Equaler, start, end int, err error) {
+func (self *Vector) StepAt(i int) (start, end int, v Equaler, err error) {
 	if i < self.Start() || i >= self.End() {
-		return nil, 0, 0, ErrOutOfRange
+		return 0, 0, nil, ErrOutOfRange
 	}
 	lo := self.t.Floor(query(i)).(*position)
 	hi := self.t.Ceil(upper(i)).(*position)
-	return lo.val, lo.pos, hi.pos, nil
+	return lo.pos, hi.pos, lo.val, nil
 }
 
 // Set sets the value of position i to v.
@@ -385,7 +385,7 @@ func (self *Vector) Do(fn func(start, end int, v Equaler)) {
 // Do performs the function fn on steps stored in the Vector over the range [from, to)
 // in ascending sort order of start position. fn is passed the start, end and value of
 // the step.
-func (self *Vector) DoRange(fn func(start, end int, v Equaler), from, to int) (err error) {
+func (self *Vector) DoRange(from, to int, fn func(start, end int, v Equaler)) (err error) {
 	if to < from {
 		return ErrInvertedRange
 	}
@@ -398,7 +398,7 @@ func (self *Vector) DoRange(fn func(start, end int, v Equaler), from, to int) (e
 		return ErrOutOfRange
 	}
 
-	v, _, end, _ := self.StepAt(from)
+	_, end, v, _ := self.StepAt(from)
 	fn(from, end, v)
 	self.t.DoRange(func(c llrb.Comparable) (done bool) {
 		p := c.(*position)
@@ -482,7 +482,7 @@ func (self *Vector) Apply(m func(Equaler) Equaler) {
 // Apply applies the mutator function m to steps stored in the Vector in over the range
 // [from, to) in ascending sort order of start position. Redundant steps resulting from
 // changes in step values are erased.
-func (self *Vector) ApplyRange(m func(Equaler) Equaler, from, to int) (err error) {
+func (self *Vector) ApplyRange(from, to int, m func(Equaler) Equaler) (err error) {
 	if to < from {
 		return ErrInvertedRange
 	}
@@ -498,7 +498,7 @@ func (self *Vector) ApplyRange(m func(Equaler) Equaler, from, to int) (err error
 	}
 
 	var end int
-	old.val, old.pos, end, _ = self.StepAt(from)
+	old.pos, end, old.val, _ = self.StepAt(from)
 	la = old.val
 	la = m(la)
 	if to <= end {
