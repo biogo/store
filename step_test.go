@@ -18,6 +18,7 @@ package step
 import (
 	"fmt"
 	check "launchpad.net/gocheck"
+	"math"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -108,6 +109,28 @@ func (s *S) TestSet_1(c *check.C) {
 				{9, Int(2)},
 			},
 			"[1:2 2:3 5:2 6:0 9:2 10:<nil>]",
+		},
+		{1, 10, Float(0),
+			[]position{
+				{3, Float(math.NaN())},
+				{4, Float(math.NaN())},
+				{5, Float(2)},
+				{1, Float(2)},
+				{2, Float(math.NaN())},
+				{9, Float(2)},
+			},
+			"[1:2 2:NaN 5:2 6:0 9:2 10:<nil>]",
+		},
+		{1, 10, Float(math.NaN()),
+			[]position{
+				{3, Float(3)},
+				{4, Float(3)},
+				{5, Float(2)},
+				{1, Float(2)},
+				{2, Float(3)},
+				{9, Float(2)},
+			},
+			"[1:2 2:3 5:2 6:NaN 9:2 10:<nil>]",
 		},
 	} {
 		sv, err := New(t.start, t.end, t.zero)
