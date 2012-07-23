@@ -385,9 +385,13 @@ func (self *Vector) SetRange(start, end int, v Equaler) {
 	}
 }
 
+// An Operation is a non-mutating function that can be applied to a vector using Do
+// and DoRange.
+type Operation func(start, end int, v Equaler)
+
 // Do performs the function fn on steps stored in the Vector in ascending sort order
 // of start position. fn is passed the start, end and value of the step.
-func (self *Vector) Do(fn func(start, end int, v Equaler)) {
+func (self *Vector) Do(fn Operation) {
 	var (
 		la  *position
 		min = self.min.pos
@@ -406,7 +410,7 @@ func (self *Vector) Do(fn func(start, end int, v Equaler)) {
 // Do performs the function fn on steps stored in the Vector over the range [from, to)
 // in ascending sort order of start position. fn is passed the start, end and value of
 // the step.
-func (self *Vector) DoRange(from, to int, fn func(start, end int, v Equaler)) (err error) {
+func (self *Vector) DoRange(from, to int, fn Operation) (err error) {
 	if to < from {
 		return ErrInvertedRange
 	}
@@ -436,14 +440,18 @@ func (self *Vector) DoRange(from, to int, fn func(start, end int, v Equaler)) (e
 	return
 }
 
+// A Mutator is a function that is used by Apply and ApplyRange to alter values within
+// a Vector.
+type Mutator func(Equaler) Equaler
+
 // Convenience mutator functions. Mutator functions are used by Apply and ApplyRange
 // to alter step values in a value-dependent manner. These mutators assume the stored
 // type matches the function and will panic is this is not true.
 var (
-	IncInt   = incInt   // Increment an int value.
-	DecInt   = decInt   // Decrement an int value.
-	IncFloat = incFloat // Increment a float64 value.
-	DecFloat = decFloat // Decrement a float64 value.
+	IncInt   Mutator = incInt   // Increment an int value.
+	DecInt   Mutator = decInt   // Decrement an int value.
+	IncFloat Mutator = incFloat // Increment a float64 value.
+	DecFloat Mutator = decFloat // Decrement a float64 value.
 )
 
 func incInt(v Equaler) Equaler   { return v.(Int) + 1 }
@@ -453,7 +461,7 @@ func decFloat(v Equaler) Equaler { return v.(Float) - 1 }
 
 // Apply applies the mutator function m to steps stored in the Vector in ascending sort order
 // of start position. Redundant steps resulting from changes in step values are erased.
-func (self *Vector) Apply(m func(Equaler) Equaler) {
+func (self *Vector) Apply(m Mutator) {
 	var (
 		la   Equaler
 		min  = self.min.pos
@@ -482,7 +490,7 @@ func (self *Vector) Apply(m func(Equaler) Equaler) {
 // Apply applies the mutator function m to steps stored in the Vector in over the range
 // [from, to) in ascending sort order of start position. Redundant steps resulting from
 // changes in step values are erased.
-func (self *Vector) ApplyRange(from, to int, m func(Equaler) Equaler) (err error) {
+func (self *Vector) ApplyRange(from, to int, m Mutator) (err error) {
 	if to < from {
 		return ErrInvertedRange
 	}

@@ -545,7 +545,7 @@ func (s *S) TestDo(c *check.C) {
 		zero       Int
 		sets       []posRange
 		setup      func()
-		fn         func(start, end int, v Equaler)
+		fn         Operation
 		expect     interface{}
 	}{
 		{1, 10, 0,
@@ -590,7 +590,7 @@ func (s *S) TestDoRange(c *check.C) {
 		zero       Int
 		sets       []posRange
 		setup      func()
-		fn         func(start, end int, v Equaler)
+		fn         Operation
 		from, to   int
 		expect     interface{}
 		err        error
@@ -665,7 +665,7 @@ func (s *S) TestApply(c *check.C) {
 		start, end int
 		zero       Equaler
 		sets       []posRange
-		mutate     func(Equaler) Equaler
+		mutate     Mutator
 		expect     string
 	}{
 		{1, 10, Int(0),
@@ -738,7 +738,7 @@ func (s *S) TestMutateRange(c *check.C) {
 		start, end int
 		zero       Int
 		sets       []posRange
-		mutate     func(Equaler) Equaler
+		mutate     Mutator
 		from, to   int
 		expect     string
 		err        error
