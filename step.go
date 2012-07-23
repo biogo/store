@@ -65,6 +65,27 @@ type Equaler interface {
 	Equal(Equaler) bool
 }
 
+// An Int is an int type satisfying the Equaler interface.
+type Int int
+
+// Equal returns whether i equals e. Equal assumes the underlying type of e is Int.
+func (i Int) Equal(e Equaler) bool {
+	return i == e.(Int)
+}
+
+// A Float is a float64 type satisfying the Equaler interface.
+type Float float64
+
+// Equal returns whether f equals e. For the purposes of the step package here, NaN == NaN
+// evaluates to true. Equal assumes the underlying type of e is Float.
+func (f Float) Equal(e Equaler) bool {
+	ef := e.(Float)
+	if f != f && ef != ef { // For our purposes NaN == NaN.
+		return true
+	}
+	return f == ef
+}
+
 // A Vector is type that support the storage of array type data in a run-length
 // encoding format.
 type Vector struct {
@@ -424,27 +445,6 @@ var (
 	IncFloat = incFloat // Increment a float64 value.
 	DecFloat = decFloat // Decrement a float64 value.
 )
-
-// An Int is an int type satisfying the Equaler interface.
-type Int int
-
-// Equal returns whether i equals e. Equal assumes the underlying type of e is Int.
-func (i Int) Equal(e Equaler) bool {
-	return i == e.(Int)
-}
-
-// A Float is a float64 type satisfying the Equaler interface.
-type Float float64
-
-// Equal returns whether f equals e. For the purposes of the step package here, NaN == NaN
-// evaluates to true. Equal assumes the underlying type of e is Float.
-func (f Float) Equal(e Equaler) bool {
-	ef := e.(Float)
-	if f != f && ef != ef { // For our purposes NaN == NaN.
-		return true
-	}
-	return f == ef
-}
 
 func incInt(v Equaler) Equaler   { return v.(Int) + 1 }
 func decInt(v Equaler) Equaler   { return v.(Int) - 1 }
