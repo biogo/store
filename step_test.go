@@ -161,12 +161,12 @@ func (s *S) TestSet_1(c *check.C) {
 func (s *S) TestSet_2(c *check.C) {
 	for i, t := range []struct {
 		start, end int
-		zero       Equaler
+		zero       Int
 		sets       []position
 		expect     string
 		count      int
 	}{
-		{1, 2, Int(0),
+		{1, 2, 0,
 			[]position{
 				{1, Int(2)},
 				{2, Int(3)},
@@ -179,28 +179,28 @@ func (s *S) TestSet_2(c *check.C) {
 			"[-1:5 0:0 1:2 2:3 5:2 6:0 10:23 11:<nil>]",
 			7,
 		},
-		{1, 10, Int(0),
+		{1, 10, 0,
 			[]position{
 				{0, Int(0)},
 			},
 			"[0:0 10:<nil>]",
 			1,
 		},
-		{1, 10, Int(0),
+		{1, 10, 0,
 			[]position{
 				{-1, Int(0)},
 			},
 			"[-1:0 10:<nil>]",
 			1,
 		},
-		{1, 10, Int(0),
+		{1, 10, 0,
 			[]position{
 				{11, Int(0)},
 			},
 			"[1:0 12:<nil>]",
 			1,
 		},
-		{1, 10, Int(0),
+		{1, 10, 0,
 			[]position{
 				{2, Int(1)},
 				{3, Int(1)},
@@ -214,7 +214,7 @@ func (s *S) TestSet_2(c *check.C) {
 			"[1:0 2:1 9:0 10:<nil>]",
 			3,
 		},
-		{1, 10, Int(0),
+		{1, 10, 0,
 			[]position{
 				{3, Int(1)},
 				{2, Int(1)},
