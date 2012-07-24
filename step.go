@@ -370,7 +370,7 @@ func (self *Vector) SetRange(start, end int, v Equaler) {
 		}
 	} else {
 		if hi.pos == end {
-			if v.Equal(hi.val) {
+			if hi != self.max && v.Equal(hi.val) {
 				hi.pos = start
 			} else {
 				self.t.Insert(&position{pos: start, val: v})
