@@ -158,6 +158,11 @@ func (self *Node) moveRedRight() *Node {
 	return self
 }
 
+// Len returns the number of elements stored in the Tree.
+func (self *Tree) Len() int {
+	return self.Count
+}
+
 // Get returns the first match of q in the Tree. If insertion without
 // replacement is used, this is probably not what you want.
 func (self *Tree) Get(q Comparable) Comparable {
@@ -169,11 +174,6 @@ func (self *Tree) Get(q Comparable) Comparable {
 		return nil
 	}
 	return n.Elem
-}
-
-// Len returns the number of elements stored in the Tree.
-func (self *Tree) Len() int {
-	return self.Count
 }
 
 func (self *Node) search(q Comparable) (n *Node) {
