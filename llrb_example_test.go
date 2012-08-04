@@ -89,22 +89,3 @@ func Example() {
 	// With replacement:    [3]
 	// Without replacement: [3 3 3]
 }
-
-/*func Example_2() {
-	values := []int{0, 1, 2, 3, 4, 2, 3, 5, 5, 65, 32, 3, 23}
-	t := &Tree{}
-	for _, v := range values {
-		t.Insert(Int(v)) // Insert with replacement.
-	}
-
-	results := []int(nil)
-	t.DoMatching(func(c Comparable) (done bool) {
-		results = append(results, int(c.(Int)))
-		return
-	}, Int(3))
-
-	fmt.Println(results)
-	// Output:
-	// [3]
-}
-*/
