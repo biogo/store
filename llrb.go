@@ -240,7 +240,9 @@ func (self *Node) insert(e Comparable) (root *Node, d int) {
 		}
 	}
 
-	return self, d
+	root = self
+
+	return
 }
 
 // DeleteMin deletes the node with the minimum value in the tree. If insertion without
@@ -266,7 +268,10 @@ func (self *Node) deleteMin() (root *Node, d int) {
 		self = self.moveRedLeft()
 	}
 	self.Left, d = self.Left.deleteMin()
-	return self.fixUp(), d
+
+	root = self.fixUp()
+
+	return
 }
 
 // DeleteMax deletes the node with the maximum value in the tree. If insertion without
@@ -295,7 +300,10 @@ func (self *Node) deleteMax() (root *Node, d int) {
 		self = self.moveRedRight()
 	}
 	self.Right, d = self.Right.deleteMax()
-	return self.fixUp(), d
+
+	root = self.fixUp()
+
+	return
 }
 
 // Delete deletes the first node found that matches e according to Compare().
@@ -339,7 +347,10 @@ func (self *Node) delete(e Comparable) (root *Node, d int) {
 			}
 		}
 	}
-	return self.fixUp(), d
+
+	root = self.fixUp()
+
+	return
 }
 
 // Return the minimum value stored in the tree. This will be the left-most minimum value if
