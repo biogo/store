@@ -266,13 +266,13 @@ func (s *S) SetUpSuite(c *check.C) {
 }
 
 func (s *S) TestMakeAndDescribeTree(c *check.C) {
-	c.Check(describeTree((*Node)(nil), true, false), check.DeepEquals, "();")
+	c.Check(describeTree((*Node)(nil), true, false), check.Equals, "();")
 	for _, desc := range []string{
 		"();",
 		"((a,c)b,(e,g)f)d;",
 	} {
 		t := makeTree(desc)
-		c.Check(describeTree(t, true, false), check.DeepEquals, desc)
+		c.Check(describeTree(t, true, false), check.Equals, desc)
 	}
 }
 
@@ -284,7 +284,7 @@ func (s *S) TestRotateLeft(c *check.C) {
 	tree := makeTree(orig)
 
 	tree = tree.rotateLeft()
-	c.Check(describeTree(tree, true, false), check.DeepEquals, rot)
+	c.Check(describeTree(tree, true, false), check.Equals, rot)
 
 	rotTree := makeTree(rot)
 	c.Check(tree, check.DeepEquals, rotTree)
@@ -298,7 +298,7 @@ func (s *S) TestRotateRight(c *check.C) {
 	tree := makeTree(orig)
 
 	tree = tree.rotateRight()
-	c.Check(describeTree(tree, true, false), check.DeepEquals, rot)
+	c.Check(describeTree(tree, true, false), check.Equals, rot)
 
 	rotTree := makeTree(rot)
 	c.Check(tree, check.DeepEquals, rotTree)
@@ -312,9 +312,9 @@ func (s *S) TestNilOperations(c *check.C) {
 		return
 	}
 	t.DeleteMin()
-	c.Check(t, check.DeepEquals, &Tree{})
+	c.Check(*t, check.Equals, Tree{})
 	t.DeleteMax()
-	c.Check(t, check.DeepEquals, &Tree{})
+	c.Check(*t, check.Equals, Tree{})
 }
 
 func (s *S) TestInsertion(c *check.C) {
@@ -398,7 +398,7 @@ func (s *S) TestGet(c *check.C) {
 	}
 	for i := min; i <= max; i++ {
 		if i&1 == 0 {
-			c.Check(t.Get(i), check.DeepEquals, compRune(i)) // Check inserted elements are present.
+			c.Check(t.Get(i), check.Equals, compRune(i)) // Check inserted elements are present.
 		} else {
 			c.Check(t.Get(i), check.Equals, Comparable(nil)) // Check inserted elements are absent.
 		}
@@ -470,12 +470,12 @@ func (s *S) TestRandomlyInsertedGet(c *check.C) {
 	}
 	// Random fetch order - check only those inserted.
 	for v := range verify {
-		c.Check(t.Get(compRune(v)), check.DeepEquals, compRune(v)) // Check inserted elements are present.
+		c.Check(t.Get(compRune(v)), check.Equals, compRune(v)) // Check inserted elements are present.
 	}
 	// Check all possible insertions.
 	for i := compRune(0); i <= compRune(max); i++ {
 		if _, ok := verify[rune(i)]; ok {
-			c.Check(t.Get(i), check.DeepEquals, compRune(i)) // Check inserted elements are present.
+			c.Check(t.Get(i), check.Equals, compRune(i)) // Check inserted elements are present.
 		} else {
 			c.Check(t.Get(i), check.Equals, Comparable(nil)) // Check inserted elements are absent.
 		}
