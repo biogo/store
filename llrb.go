@@ -40,7 +40,7 @@ type Comparable interface {
 	// receiver and the parameter.
 	//
 	// Given c = a.Compare(b):
-	//  c < 0 if a r < b;
+	//  c < 0 if a < b;
 	//  c == 0 if a == b; and
 	//  c > 0 if a > b.
 	//
