@@ -385,7 +385,7 @@ func (s *S) TestDeletion(c *check.C) {
 			}
 		}
 	}
-	c.Check(t, check.DeepEquals, &Tree{})
+	c.Check(*t, check.Equals, Tree{})
 }
 
 func (s *S) TestGet(c *check.C) {
@@ -538,7 +538,7 @@ func (s *S) TestRandomDeletion(c *check.C) {
 			}
 		}
 	}
-	c.Check(t, check.DeepEquals, &Tree{})
+	c.Check(*t, check.Equals, Tree{})
 }
 
 func (s *S) TestDeleteMinMax(c *check.C) {
