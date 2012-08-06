@@ -28,7 +28,7 @@ type (
 func (c Int) Compare(b llrb.Comparable) int {
 	switch i := b.(type) {
 	case Int:
-		return int(c) - int(i)
+		return int(c - i)
 	case IntUpperBound:
 		return int(c) - int(i)
 	}
@@ -41,7 +41,7 @@ func (c IntUpperBound) Compare(b llrb.Comparable) int {
 	case Int:
 		d = int(c) - int(i)
 	case IntUpperBound:
-		d = int(c) - int(i)
+		d = int(c - i)
 	}
 	if d == 0 {
 		return 1
