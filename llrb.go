@@ -447,7 +447,7 @@ func (self *Node) ceil(q Comparable) *Node {
 type Operation func(Comparable) (done bool)
 
 // Do performs fn on all values stored in the tree. A boolean is returned indicating whether the
-// Do traversal was interupted by an Operation returning true. If fn alters stored values' sort
+// Do traversal was interrupted by an Operation returning true. If fn alters stored values' sort
 // relationships, future tree operation behaviors are undefined.
 func (self *Tree) Do(fn Operation) bool {
 	if self.Root == nil {
@@ -474,7 +474,7 @@ func (self *Node) do(fn Operation) (done bool) {
 }
 
 // DoReverse performs fn on all values stored in the tree, but in reverse of sort order. A boolean
-// is returned indicating whether the Do traversal was interupted by an Operation returning true.
+// is returned indicating whether the Do traversal was interrupted by an Operation returning true.
 // If fn alters stored values' sort relationships, future tree operation behaviors are undefined.
 func (self *Tree) DoReverse(fn Operation) bool {
 	if self.Root == nil {
@@ -502,7 +502,7 @@ func (self *Node) doReverse(fn Operation) (done bool) {
 
 // DoRange performs fn on all values stored in the tree over the interval [from, to) from left
 // to right. If to equals from the call is a no-op, and if to is less than from DoRange will
-// panic. A boolean is returned indicating whether the Do traversal was interupted by an
+// panic. A boolean is returned indicating whether the Do traversal was interrupted by an
 // Operation returning true. If fn alters stored values' sort relationships future tree
 // operation behaviors are undefined.
 func (self *Tree) DoRange(fn Operation, from, to Comparable) bool {
@@ -540,7 +540,7 @@ func (self *Node) doRange(fn Operation, lo, hi Comparable) (done bool) {
 
 // DoRangeReverse performs fn on all values stored in the tree over the interval [to, from) from
 // right to left. If from equals to the call is a no-op, and if from is less than to DoRange will
-// panic. A boolean is returned indicating whether the Do traversal was interupted by an Operation
+// panic. A boolean is returned indicating whether the Do traversal was interrupted by an Operation
 // returning true. If fn alters stored values' sort relationships future tree operation behaviors
 // are undefined.
 func (self *Tree) DoRangeReverse(fn Operation, from, to Comparable) bool {
@@ -580,7 +580,7 @@ func (self *Node) doRangeReverse(fn Operation, hi, lo Comparable) (done bool) {
 // q.Compare() used to guide tree traversal, so DoMatching() will out perform Do() with a called
 // conditional function if the condition is based on sort order, but can not be reliably used if
 // the condition is independent of sort order. A boolean is returned indicating whether the Do
-// traversal was interupted by an Operation returning true.If fn alters stored values' sort
+// traversal was interrupted by an Operation returning true. If fn alters stored values' sort
 // relationships, future tree operation behaviors are undefined.
 func (self *Tree) DoMatching(fn Operation, q Comparable) bool {
 	if self.Root == nil {
