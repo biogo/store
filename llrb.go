@@ -246,7 +246,7 @@ func (self *Node) insert(e Comparable) (root *Node, d int) {
 }
 
 // DeleteMin deletes the node with the minimum value in the tree. If insertion without
-// replacement has been used the the left-most minimum will be deleted.
+// replacement has been used, the left-most minimum will be deleted.
 func (self *Tree) DeleteMin() {
 	if self.Root == nil {
 		return
@@ -275,7 +275,7 @@ func (self *Node) deleteMin() (root *Node, d int) {
 }
 
 // DeleteMax deletes the node with the maximum value in the tree. If insertion without
-// replacement has been used the the right-most maximum will be deleted.
+// replacement has been used, the right-most maximum will be deleted.
 func (self *Tree) DeleteMax() {
 	if self.Root == nil {
 		return
