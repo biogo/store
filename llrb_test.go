@@ -664,11 +664,6 @@ func (s *S) TestRandomInsertionDeletion(c *check.C) {
 	}
 }
 
-var (
-	modeName = []string{TD234: "TD234", BU23: "BU23"}
-	arrows   = map[Color]string{Red: "none", Black: "normal"}
-)
-
 func (s *S) TestDeleteRight(c *check.C) {
 	type target struct {
 		min, max, target compRune
@@ -739,6 +734,11 @@ func checkTree(t *Tree, c *check.C, f string, i ...interface{}) (ok bool) {
 	ok = ok && c.Check(t.isBalanced(), check.Equals, true, comm)
 	return
 }
+
+var (
+	modeName = []string{TD234: "TD234", BU23: "BU23"}
+	arrows   = map[Color]string{Red: "none", Black: "normal"}
+)
 
 func dot(t *Tree, label string) string {
 	if t == nil {
