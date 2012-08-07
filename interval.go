@@ -35,7 +35,7 @@ func init() {
 	}
 }
 
-// ErrInvertedRange is returned if an Overlapper, o is used where the minimum values is
+// ErrInvertedRange is returned if an Overlapper is used where the minimum value is
 // greater than the maximum value according to Compare().
 var ErrInvertedRange = errors.New("interval: inverted range")
 
