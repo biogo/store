@@ -589,7 +589,7 @@ func (self *Tree) DoMatching(fn Operation, q Overlapper) (t bool, err error) {
 
 func (self *Node) doMatch(fn Operation, q Overlapper) (done bool) {
 	c := q.Overlap(self.Range)
-	if c <= 0 && self.Left != nil {
+	if c == 0 && self.Left != nil {
 		done = self.Left.doMatch(fn, q)
 		if done {
 			return
@@ -601,7 +601,7 @@ func (self *Node) doMatch(fn Operation, q Overlapper) (done bool) {
 			return
 		}
 	}
-	if c >= 0 && self.Right != nil {
+	if c == 0 && self.Right != nil {
 		done = self.Right.doMatch(fn, q)
 	}
 	return
@@ -625,7 +625,7 @@ func (self *Tree) DoMatchingReverse(fn Operation, q Overlapper) (t bool, err err
 
 func (self *Node) doMatchReverse(fn Operation, q Overlapper) (done bool) {
 	c := q.Overlap(self.Range)
-	if c >= 0 && self.Right != nil {
+	if c == 0 && self.Right != nil {
 		done = self.Right.doMatchReverse(fn, q)
 		if done {
 			return
@@ -637,7 +637,7 @@ func (self *Node) doMatchReverse(fn Operation, q Overlapper) (done bool) {
 			return
 		}
 	}
-	if c <= 0 && self.Left != nil {
+	if c == 0 && self.Left != nil {
 		done = self.Left.doMatchReverse(fn, q)
 	}
 	return
