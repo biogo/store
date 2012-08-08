@@ -164,7 +164,7 @@ func (or overRune) Min() Comparable     { return or }
 func (or overRune) Max() Comparable     { return or }
 func (or overRune) SetMin(_ Comparable) {}
 func (or overRune) SetMax(_ Comparable) {}
-func (or overRune) Mutable() Mutable    { return or }
+func (or overRune) NewMutable() Mutable { return or }
 
 type compInt int
 
@@ -191,7 +191,7 @@ func (o *overlap) Min() Comparable     { return o.start }
 func (o *overlap) Max() Comparable     { return o.end }
 func (o *overlap) SetMin(c Comparable) { o.start = c.(compInt) }
 func (o *overlap) SetMax(c Comparable) { o.end = c.(compInt) }
-func (o *overlap) Mutable() Mutable    { return &overlap{o.start, o.end} }
+func (o *overlap) NewMutable() Mutable { return &overlap{o.start, o.end} }
 func (o *overlap) String() string      { return fmt.Sprintf("[%d,%d)", o.start, o.end) }
 
 // Build a tree from a simplified Newick format returning the root node.

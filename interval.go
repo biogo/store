@@ -58,7 +58,7 @@ type Overlapper interface {
 	// Return a Comparable equal to the Maximum value of the Overlapper.
 	Max() Comparable
 	// Returns an mutable copy of the Overlapper.
-	Mutable() Mutable
+	NewMutable() Mutable
 }
 
 // A Mutable is an Overlapper that can have its range altered.
@@ -265,7 +265,7 @@ func (self *Tree) Insert(e Overlapper) (err error) {
 
 func (self *Node) insert(e Overlapper) (root *Node, d int) {
 	if self == nil {
-		return &Node{Elem: e, Range: e.Mutable()}, 1
+		return &Node{Elem: e, Range: e.NewMutable()}, 1
 	} else if self.Elem == nil {
 		self.Elem = e
 		self.Range.SetMin(e.Min())

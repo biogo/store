@@ -52,10 +52,10 @@ func (o *IntOverlap) Overlap(b interval.Overlapper) int {
 	}
 	panic("cannot reach")
 }
-func (o *IntOverlap) Min() interval.Comparable  { return o.Start }
-func (o *IntOverlap) Max() interval.Comparable  { return o.End }
-func (o *IntOverlap) Mutable() interval.Mutable { return &IntRange{*o} }
-func (o *IntOverlap) String() string            { return fmt.Sprintf("[%d,%d)", o.Start, o.End) }
+func (o *IntOverlap) Min() interval.Comparable     { return o.Start }
+func (o *IntOverlap) Max() interval.Comparable     { return o.End }
+func (o *IntOverlap) NewMutable() interval.Mutable { return &IntRange{*o} }
+func (o *IntOverlap) String() string               { return fmt.Sprintf("[%d,%d)", o.Start, o.End) }
 
 type IntRange struct{ IntOverlap }
 
