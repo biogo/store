@@ -455,11 +455,8 @@ func (self *Node) max() (n *Node) {
 	return
 }
 
-// Floor returns the greatest interval equal to or less than the query q according to q.Overlap().
-func (self *Tree) Floor(q Overlapper) (o Overlapper, err error) {
-	if q.Min().Compare(q.Max()) > 0 {
-		return nil, ErrInvertedRange
-	}
+// Floor returns the greatest interval equal to or less than the query q according to q.Compare(o.Min()).
+func (self *Tree) Floor(q Comparable) (o Overlapper, err error) {
 	if self.Root == nil {
 		return
 	}
@@ -470,28 +467,25 @@ func (self *Tree) Floor(q Overlapper) (o Overlapper, err error) {
 	return n.Elem, nil
 }
 
-func (self *Node) floor(q Overlapper) *Node {
+func (self *Node) floor(m Comparable) *Node {
 	if self == nil {
 		return nil
 	}
-	switch c := q.Overlap(self.Elem); {
+	switch c := m.Compare(self.Elem.Min()); {
 	case c == 0:
 		return self
 	case c < 0:
-		return self.Left.floor(q)
+		return self.Left.floor(m)
 	default:
-		if r := self.Right.floor(q); r != nil {
+		if r := self.Right.floor(m); r != nil {
 			return r
 		}
 	}
 	return self
 }
 
-// Ceil returns the smallest value equal to or greater than the query q according to q.Overlap().
-func (self *Tree) Ceil(q Overlapper) (o Overlapper, err error) {
-	if q.Min().Compare(q.Max()) > 0 {
-		return nil, ErrInvertedRange
-	}
+// Ceil returns the smallest value equal to or greater than the query q according to q.Compare().
+func (self *Tree) Ceil(q Comparable) (o Overlapper, err error) {
 	if self.Root == nil {
 		return
 	}
@@ -502,17 +496,17 @@ func (self *Tree) Ceil(q Overlapper) (o Overlapper, err error) {
 	return n.Elem, nil
 }
 
-func (self *Node) ceil(q Overlapper) *Node {
+func (self *Node) ceil(m Comparable) *Node {
 	if self == nil {
 		return nil
 	}
-	switch c := q.Overlap(self.Elem); {
+	switch c := m.Compare(self.Elem.Min()); {
 	case c == 0:
 		return self
 	case c > 0:
-		return self.Right.ceil(q)
+		return self.Right.ceil(m)
 	default:
-		if l := self.Left.ceil(q); l != nil {
+		if l := self.Left.ceil(m); l != nil {
 			return l
 		}
 	}
