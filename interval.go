@@ -168,6 +168,7 @@ func (self *Node) flipColors() {
 // fixUp ensures that black link balance is correct, that red nodes lean left,
 // and that 4 nodes are split in the case of BU23 and properly balanced in TD234.
 func (self *Node) fixUp() *Node {
+	self.fixUpRange()
 	if self.Right.color() == Red {
 		if Mode == TD234 && self.Right.Left.color() == Red {
 			self.Right = self.Right.rotateRight()
@@ -180,7 +181,17 @@ func (self *Node) fixUp() *Node {
 	if Mode == BU23 && self.Left.color() == Red && self.Right.color() == Red {
 		self.flipColors()
 	}
+
 	return self
+}
+
+func (self *Node) fixUpRange() {
+	if self.Left != nil {
+		self.Range.SetMin(min(self.Elem.Min(), self.Left.Range.Min()))
+	}
+	if self.Right != nil {
+		self.Range.SetMax(max(self.Elem.Max(), self.Right.Range.Max()))
+	}
 }
 
 func (self *Node) moveRedLeft() *Node {
@@ -324,6 +335,9 @@ func (self *Node) deleteMin() (root *Node, d int) {
 		self = self.moveRedLeft()
 	}
 	self.Left, d = self.Left.deleteMin()
+	if self.Left == nil {
+		self.Range.SetMin(self.Elem.Min())
+	}
 
 	root = self.fixUp()
 
@@ -355,6 +369,9 @@ func (self *Node) deleteMax() (root *Node, d int) {
 		self = self.moveRedRight()
 	}
 	self.Right, d = self.Right.deleteMax()
+	if self.Right == nil {
+		self.Range.SetMax(self.Elem.Max())
+	}
 
 	root = self.fixUp()
 
@@ -386,6 +403,9 @@ func (self *Node) delete(e Overlapper) (root *Node, d int) {
 				self = self.moveRedLeft()
 			}
 			self.Left, d = self.Left.delete(e)
+			if self.Left == nil {
+				self.Range.SetMin(self.Elem.Min())
+			}
 		}
 	} else {
 		if self.Left.color() == Red {
@@ -403,6 +423,9 @@ func (self *Node) delete(e Overlapper) (root *Node, d int) {
 				self.Right, d = self.Right.deleteMin()
 			} else {
 				self.Right, d = self.Right.delete(e)
+			}
+			if self.Right == nil {
+				self.Range.SetMax(self.Elem.Max())
 			}
 		}
 	}
