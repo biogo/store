@@ -216,17 +216,9 @@ func (self *Tree) Get(q Overlapper) (o []Overlapper, err error) {
 	if q.Min().Compare(q.Max()) > 0 {
 		return nil, ErrInvertedRange
 	}
-	if self.Root == nil {
-		return
+	if self.Root != nil && q.Overlap(self.Root.Range) == 0 {
+		self.Root.doMatch(func(e Overlapper) (done bool) { o = append(o, e); return }, q)
 	}
-	self.Root.doMatch(
-		func(e Overlapper) (done bool) {
-			o = append(o, e)
-			return
-		},
-		q,
-	)
-
 	return
 }
 
@@ -581,15 +573,14 @@ func (self *Tree) DoMatching(fn Operation, q Overlapper) (t bool, err error) {
 	if q.Min().Compare(q.Max()) > 0 {
 		return false, ErrInvertedRange
 	}
-	if self.Root == nil {
-		return
+	if self.Root != nil && q.Overlap(self.Root.Range) == 0 {
+		return self.Root.doMatch(fn, q), nil
 	}
-	return self.Root.doMatch(fn, q), nil
+	return
 }
 
 func (self *Node) doMatch(fn Operation, q Overlapper) (done bool) {
-	c := q.Overlap(self.Range)
-	if c == 0 && self.Left != nil {
+	if self.Left != nil && q.Overlap(self.Left.Range) == 0 {
 		done = self.Left.doMatch(fn, q)
 		if done {
 			return
@@ -601,7 +592,7 @@ func (self *Node) doMatch(fn Operation, q Overlapper) (done bool) {
 			return
 		}
 	}
-	if c == 0 && self.Right != nil {
+	if self.Right != nil && q.Overlap(self.Right.Range) == 0 {
 		done = self.Right.doMatch(fn, q)
 	}
 	return
@@ -617,15 +608,14 @@ func (self *Tree) DoMatchingReverse(fn Operation, q Overlapper) (t bool, err err
 	if q.Min().Compare(q.Max()) > 0 {
 		return false, ErrInvertedRange
 	}
-	if self.Root == nil {
-		return
+	if self.Root != nil && q.Overlap(self.Root.Range) == 0 {
+		return self.Root.doMatch(fn, q), nil
 	}
-	return self.Root.doMatchReverse(fn, q), nil
+	return
 }
 
 func (self *Node) doMatchReverse(fn Operation, q Overlapper) (done bool) {
-	c := q.Overlap(self.Range)
-	if c == 0 && self.Right != nil {
+	if self.Right != nil && q.Overlap(self.Right.Range) == 0 {
 		done = self.Right.doMatchReverse(fn, q)
 		if done {
 			return
@@ -637,7 +627,7 @@ func (self *Node) doMatchReverse(fn Operation, q Overlapper) (done bool) {
 			return
 		}
 	}
-	if c == 0 && self.Left != nil {
+	if self.Left != nil && q.Overlap(self.Left.Range) == 0 {
 		done = self.Left.doMatchReverse(fn, q)
 	}
 	return
