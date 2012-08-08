@@ -168,7 +168,7 @@ func (self *Node) flipColors() {
 // fixUp ensures that black link balance is correct, that red nodes lean left,
 // and that 4 nodes are split in the case of BU23 and properly balanced in TD234.
 func (self *Node) fixUp() *Node {
-	self.fixUpRange()
+	self.adjustRange(self.Elem)
 	if self.Right.color() == Red {
 		if Mode == TD234 && self.Right.Left.color() == Red {
 			self.Right = self.Right.rotateRight()
@@ -185,13 +185,30 @@ func (self *Node) fixUp() *Node {
 	return self
 }
 
-func (self *Node) fixUpRange() {
+// adjustRange sets the Range to the maximum extent of the Range and the provided
+// Overlapper. Pass the Elem on deletion and Range on insertion.
+func (self *Node) adjustRange(r Overlapper) {
 	if self.Left != nil {
-		self.Range.SetMin(min(self.Elem.Min(), self.Left.Range.Min()))
+		self.Range.SetMin(min(r.Min(), self.Left.Range.Min()))
+		self.Range.SetMax(max(r.Max(), self.Left.Range.Max()))
 	}
 	if self.Right != nil {
-		self.Range.SetMax(max(self.Elem.Max(), self.Right.Range.Max()))
+		self.Range.SetMax(max(r.Max(), self.Right.Range.Max()))
 	}
+}
+
+func min(a, b Comparable) Comparable {
+	if a.Compare(b) < 0 {
+		return a
+	}
+	return b
+}
+
+func max(a, b Comparable) Comparable {
+	if a.Compare(b) > 0 {
+		return a
+	}
+	return b
 }
 
 func (self *Node) moveRedLeft() *Node {
@@ -282,35 +299,10 @@ func (self *Node) insert(e Overlapper) (root *Node, d int) {
 		}
 	}
 
-	self.adjustRange()
+	self.adjustRange(self.Range)
 	root = self
 
 	return
-}
-
-func (self *Node) adjustRange() {
-	if self.Left != nil {
-		self.Range.SetMin(min(self.Range.Min(), self.Left.Range.Min()))
-		self.Range.SetMax(max(self.Range.Max(), self.Left.Range.Max()))
-	}
-	if self.Right != nil {
-		self.Range.SetMin(min(self.Range.Min(), self.Right.Range.Min()))
-		self.Range.SetMax(max(self.Range.Max(), self.Right.Range.Max()))
-	}
-}
-
-func min(a, b Comparable) Comparable {
-	if a.Compare(b) < 0 {
-		return a
-	}
-	return b
-}
-
-func max(a, b Comparable) Comparable {
-	if a.Compare(b) > 0 {
-		return a
-	}
-	return b
 }
 
 // DeleteMin deletes the left-most interval will be deleted.
