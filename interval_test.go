@@ -121,6 +121,35 @@ func (n *Node) isBalanced(black int) bool {
 	return n.Left.isBalanced(black) && n.Right.isBalanced(black)
 }
 
+// Does every node correctly annotate the range of its children.
+func (t *Tree) isRanged() bool {
+	if t == nil {
+		return true
+	}
+	return t.Root.isRanged()
+}
+func (n *Node) isRanged() bool {
+	if n == nil {
+		return true
+	}
+	e, r := n.Elem, n.Range
+	m := n.bounding(&overlap{start: e.Min().(compInt), end: e.Max().(compInt)})
+	return m.Min().Compare(r.Min()) == 0 && m.Max().Compare(r.Max()) == 0 &&
+		n.Left.isRanged() &&
+		n.Right.isRanged()
+}
+func (n *Node) bounding(m Mutable) Mutable {
+	m.SetMin(min(n.Elem.Min(), m.Min()))
+	m.SetMax(max(n.Elem.Max(), m.Max()))
+	if n.Left != nil {
+		m = n.Left.bounding(m)
+	}
+	if n.Right != nil {
+		m = n.Right.bounding(m)
+	}
+	return m
+}
+
 // Test helpers
 
 type overRune rune
@@ -320,6 +349,30 @@ func (s *S) TestNilOperations(c *check.C) {
 	c.Check(*t, check.Equals, Tree{})
 }
 
+func (s *S) TestRange(c *check.C) {
+	t := &Tree{}
+	for i, iv := range []*overlap{
+		{0, 2},
+		{2, 4},
+		{1, 6},
+		{3, 4},
+		{1, 3},
+		{4, 6},
+		{5, 8},
+		{6, 8},
+		{5, 9},
+	} {
+		t.Insert(iv)
+		ok := c.Check(t.isRanged(), check.Equals, true, check.Commentf("insertion %d: %v", i, iv))
+		if !ok && *genDot && t.Len() <= *dotLimit {
+			err := dotFile(t, fmt.Sprintf("TestRange_%d", i), "")
+			if err != nil {
+				c.Errorf("Dot file write failed: %v", err)
+			}
+		}
+	}
+}
+
 func (s *S) TestInsertion(c *check.C) {
 	var (
 		min, max = compInt(0), compInt(1000)
@@ -333,6 +386,7 @@ func (s *S) TestInsertion(c *check.C) {
 		failed = failed || !c.Check(t.isBST(), check.Equals, true)
 		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+		failed = failed || !c.Check(t.isRanged(), check.Equals, true)
 		if failed {
 			if *printTree {
 				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
@@ -375,6 +429,7 @@ func (s *S) TestDeletion(c *check.C) {
 			failed = failed || !c.Check(t.isBST(), check.Equals, true)
 			failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 			failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+			failed = failed || !c.Check(t.isRanged(), check.Equals, true)
 			if failed {
 				if *printTree {
 					c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
@@ -516,6 +571,7 @@ func (s *S) TestRandomInsertion(c *check.C) {
 		failed = failed || !c.Check(t.isBST(), check.Equals, true)
 		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+		failed = failed || !c.Check(t.isRanged(), check.Equals, true)
 		if failed {
 			if *printTree {
 				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
@@ -551,6 +607,7 @@ func (s *S) TestRandomDeletion(c *check.C) {
 			failed = failed || !c.Check(t.isBST(), check.Equals, true)
 			failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 			failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+			failed = failed || !c.Check(t.isRanged(), check.Equals, true)
 			if failed {
 				if *printTree {
 					c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
@@ -591,6 +648,7 @@ func (s *S) TestDeleteMinMax(c *check.C) {
 		failed = failed || !c.Check(t.isBST(), check.Equals, true)
 		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+		failed = failed || !c.Check(t.isRanged(), check.Equals, true)
 		if failed {
 			if *printTree {
 				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
@@ -611,6 +669,7 @@ func (s *S) TestDeleteMinMax(c *check.C) {
 		failed = failed || !c.Check(t.isBST(), check.Equals, true)
 		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
 		failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+		failed = failed || !c.Check(t.isRanged(), check.Equals, true)
 		if failed {
 			if *printTree {
 				c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))

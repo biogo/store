@@ -128,11 +128,11 @@ func (self *Node) rotateLeft() (root *Node) {
 	// Assumes: self has two children.
 	root = self.Right
 	if root.Left != nil {
-		self.Range.SetMax(root.Left.Range.Max())
+		self.Range.SetMax(max(self.Elem.Max(), root.Left.Range.Max()))
 	} else {
 		self.Range.SetMax(self.Elem.Max())
 	}
-	root.Range.SetMin(self.Range.Min())
+	root.Range.SetMin(min(root.Elem.Min(), self.Range.Min()))
 	self.Right = root.Left
 	root.Left = self
 	root.Color = self.Color
@@ -145,11 +145,11 @@ func (self *Node) rotateRight() (root *Node) {
 	// Assumes: self has two children.
 	root = self.Left
 	if root.Right != nil {
-		self.Range.SetMin(root.Right.Range.Min())
+		self.Range.SetMin(min(self.Elem.Min(), root.Right.Range.Min()))
 	} else {
 		self.Range.SetMin(self.Elem.Min())
 	}
-	root.Range.SetMax(self.Range.Max())
+	root.Range.SetMax(max(root.Elem.Max(), self.Range.Max()))
 	self.Left = root.Right
 	root.Right = self
 	root.Color = self.Color
