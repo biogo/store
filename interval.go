@@ -375,7 +375,7 @@ func (self *Tree) Delete(e Interface) (err error) {
 	if e.Min().Compare(e.Max()) > 0 {
 		return ErrInvertedRange
 	}
-	if self.Root == nil {
+	if self.Root == nil || !e.Overlap(self.Root.Range) {
 		return
 	}
 	var d int
@@ -390,7 +390,7 @@ func (self *Tree) Delete(e Interface) (err error) {
 
 func (self *Node) delete(e Interface) (root *Node, d int) {
 	if e.Min().Compare(self.Elem.Min()) < 0 {
-		if self.Left != nil {
+		if self.Left != nil && e.Overlap(self.Left.Range) {
 			if self.Left.color() == Black && self.Left.Left.color() == Black {
 				self = self.moveRedLeft()
 			}
@@ -406,7 +406,7 @@ func (self *Node) delete(e Interface) (root *Node, d int) {
 		if self.Right == nil && e.Overlap(self.Elem) {
 			return nil, -1
 		}
-		if self.Right != nil {
+		if self.Right != nil && e.Overlap(self.Right.Range) {
 			if self.Right.color() == Black && self.Right.Left.color() == Black {
 				self = self.moveRedRight()
 			}
