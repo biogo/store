@@ -332,7 +332,7 @@ func (self *Node) delete(e Comparable) (root *Node, d int) {
 		if self.Left.color() == Red {
 			self = self.rotateRight()
 		}
-		if e.Compare(self.Elem) == 0 && self.Right == nil {
+		if self.Right == nil && e.Compare(self.Elem) == 0 {
 			return nil, -1
 		}
 		if self.Right != nil {
