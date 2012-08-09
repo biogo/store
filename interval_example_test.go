@@ -26,53 +26,48 @@ func (c Int) Compare(b interval.Comparable) int {
 	return int(c - b.(Int))
 }
 
-type IntOverlap struct{ Start, End Int }
+type Interval struct {
+	Start, End Int
+	Payload    interface{}
+}
 
-func (o *IntOverlap) Overlap(b interval.Overlapper) int {
+func (i Interval) Overlap(b interval.Range) bool {
 	var start, end Int
 	switch bc := b.(type) {
-	case *IntOverlap:
+	case Interval:
 		start, end = bc.Start, bc.End
-	case *IntRange:
+	case *Mutable:
 		start, end = bc.Start, bc.End
 	default:
 		panic("unknown type")
 	}
 
 	// Half-open interval indexing.
-	if o.End > start && o.Start < end {
-		return 0
-	}
-
-	if o.End <= start {
-		return -1
-	}
-	if o.Start >= end {
-		return 1
-	}
-	panic("cannot reach")
+	return i.End > start && i.Start < end
 }
-func (o *IntOverlap) Min() interval.Comparable     { return o.Start }
-func (o *IntOverlap) Max() interval.Comparable     { return o.End }
-func (o *IntOverlap) NewMutable() interval.Mutable { return &IntRange{*o} }
-func (o *IntOverlap) String() string               { return fmt.Sprintf("[%d,%d)", o.Start, o.End) }
+func (i Interval) Min() interval.Comparable     { return i.Start }
+func (i Interval) Max() interval.Comparable     { return i.End }
+func (i Interval) NewMutable() interval.Mutable { return &Mutable{i.Start, i.End} }
+func (i Interval) String() string               { return fmt.Sprintf("[%d,%d)", i.Start, i.End) }
 
-type IntRange struct{ IntOverlap }
+type Mutable struct{ Start, End Int }
 
-func (r *IntRange) SetMin(m interval.Comparable) { r.IntOverlap.Start = m.(Int) }
-func (r *IntRange) SetMax(m interval.Comparable) { r.IntOverlap.End = m.(Int) }
+func (m *Mutable) Min() interval.Comparable     { return m.Start }
+func (m *Mutable) Max() interval.Comparable     { return m.End }
+func (m *Mutable) SetMin(c interval.Comparable) { m.Start = c.(Int) }
+func (m *Mutable) SetMax(c interval.Comparable) { m.End = c.(Int) }
 
 func Example() {
-	ivs := []*IntOverlap{
-		{0, 2},
-		{2, 4},
-		{1, 6},
-		{3, 4},
-		{1, 3},
-		{4, 6},
-		{5, 8},
-		{6, 8},
-		{5, 9},
+	ivs := []Interval{
+		{Start: 0, End: 2},
+		{Start: 2, End: 4},
+		{Start: 1, End: 6},
+		{Start: 3, End: 4},
+		{Start: 1, End: 3},
+		{Start: 4, End: 6},
+		{Start: 5, End: 8},
+		{Start: 6, End: 8},
+		{Start: 5, End: 9},
 	}
 
 	t := &interval.Tree{}
@@ -83,7 +78,7 @@ func Example() {
 		}
 	}
 
-	results, err := t.Get(&IntOverlap{3, 6})
+	results, err := t.Get(Interval{Start: 3, End: 6})
 	if err != nil {
 		fmt.Println(err)
 	}

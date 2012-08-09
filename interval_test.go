@@ -44,7 +44,7 @@ func (t *Tree) isBST() bool {
 
 // Are all the values in the BST rooted at x between min and max,
 // and does the same property hold for both subtrees?
-func (n *Node) isBST(min, max Overlapper) bool {
+func (n *Node) isBST(min, max Interface) bool {
 	if n == nil {
 		return true
 	}
@@ -157,8 +157,8 @@ type overRune rune
 func (or overRune) Compare(b Comparable) int {
 	return int(or) - int(b.(overRune))
 }
-func (or overRune) Overlap(b Overlapper) int {
-	return int(or) - int(b.(overRune))
+func (or overRune) Overlap(b Range) bool {
+	return or == b.(overRune)
 }
 func (or overRune) Min() Comparable     { return or }
 func (or overRune) Max() Comparable     { return or }
@@ -174,18 +174,9 @@ func (or compInt) Compare(b Comparable) int {
 
 type overlap struct{ start, end compInt }
 
-func (o *overlap) Overlap(b Overlapper) int {
+func (o *overlap) Overlap(b Range) bool {
 	bc := b.(*overlap)
-	if o.end > bc.start && o.start < bc.end {
-		return 0
-	}
-	if o.end <= bc.start {
-		return -1
-	}
-	if o.start >= bc.end {
-		return 1
-	}
-	panic("cannot reach")
+	return o.end > bc.start && o.start < bc.end
 }
 func (o *overlap) Min() Comparable     { return o.start }
 func (o *overlap) Max() Comparable     { return o.end }
@@ -469,7 +460,7 @@ func (s *S) TestGet(c *check.C) {
 			c.Check(o[0], check.DeepEquals, &overlap{start: i, end: i + 1}) // Check inserted elements are correct.
 		} else {
 			o, _ := t.Get(&overlap{start: i, end: i + 1})
-			c.Check(o, check.DeepEquals, []Overlapper(nil)) // Check inserted elements are absent.
+			c.Check(o, check.DeepEquals, []Interface(nil)) // Check inserted elements are absent.
 		}
 	}
 }
@@ -491,7 +482,7 @@ func (s *S) TestFloor(c *check.C) {
 		}
 	}
 	l, _ := t.Floor(min - 1)
-	c.Check(l, check.DeepEquals, Overlapper(nil))
+	c.Check(l, check.DeepEquals, Interface(nil))
 }
 
 func (s *S) TestCeil(c *check.C) {
@@ -784,7 +775,7 @@ func BenchmarkMin(b *testing.B) {
 		t.Insert(&overlap{start: s, end: s + length})
 	}
 	b.StartTimer()
-	var m Overlapper
+	var m Interface
 	for i := compInt(0); i < N; i++ {
 		m = t.Min()
 	}
@@ -803,7 +794,7 @@ func BenchmarkMax(b *testing.B) {
 		t.Insert(&overlap{start: s, end: s + length})
 	}
 	b.StartTimer()
-	var m Overlapper
+	var m Interface
 	for i := compInt(0); i < N; i++ {
 		m = t.Max()
 	}

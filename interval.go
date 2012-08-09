@@ -35,35 +35,35 @@ func init() {
 	}
 }
 
-// ErrInvertedRange is returned if an Overlapper is used where the minimum value is
+// ErrInvertedRange is returned if an Range is used where the minimum value is
 // greater than the maximum value according to Compare().
 var ErrInvertedRange = errors.New("interval: inverted range")
 
-// An Overlapper is a type that can be inserted into a Tree or used as a range
-// or equality query on the tree,
+// An Overlapper can determine whether it overlaps a range.
 type Overlapper interface {
-	// Overlap returns a value indicating the sort order relationship between the
-	// receiver and the parameter.
-	//
-	// Given c = a.Overlap(b):
-	//  c < 0 if a.Max() ≲ b.Min();
-	//  c == 0 if a.Max() ≳ b.Min() && a.Min() ≲ b.Max(); and
-	//  c > 0 if a.Min() ≳ b.Max().
-	//
-	// The details of inequalities between a and b can be used to specify overlap/match
-	// requirements and indexing types, for example half-open or closed.
-	Overlap(Overlapper) int
+	// Overlap returns a boolean indicating whether the receiver overlaps the parameter.
+	Overlap(Range) bool
+}
+
+// A Range is a type that describes the basic characteristics of an interval.
+type Range interface {
 	// Return a Comparable equal to the Minimum value of the Overlapper.
 	Min() Comparable
 	// Return a Comparable equal to the Maximum value of the Overlapper.
 	Max() Comparable
-	// Returns an mutable copy of the Overlapper.
-	NewMutable() Mutable
+}
+
+// An Interface is an Overlapper that can be inserted into a Tree or used as a range
+// or equality query on the tree,
+type Interface interface {
+	Overlapper
+	Range
+	NewMutable() Mutable // Returns an mutable copy of the Interface's range.
 }
 
 // A Mutable is an Overlapper that can have its range altered.
 type Mutable interface {
-	Overlapper
+	Range
 	SetMin(Comparable) // Set the minimum value.
 	SetMax(Comparable) // Set the maximum value.
 }
@@ -101,7 +101,7 @@ const (
 
 // A Node represents a node in the LLRB tree.
 type Node struct {
-	Elem        Overlapper
+	Elem        Interface
 	Range       Mutable
 	Left, Right *Node
 	Color       Color
@@ -168,7 +168,7 @@ func (self *Node) flipColors() {
 // fixUp ensures that black link balance is correct, that red nodes lean left,
 // and that 4 nodes are split in the case of BU23 and properly balanced in TD234.
 func (self *Node) fixUp() *Node {
-	self.adjustRange(self.Elem)
+	self.adjustRangeTo(self.Elem)
 	if self.Right.color() == Red {
 		if Mode == TD234 && self.Right.Left.color() == Red {
 			self.Right = self.Right.rotateRight()
@@ -186,8 +186,8 @@ func (self *Node) fixUp() *Node {
 }
 
 // adjustRange sets the Range to the maximum extent of the Range and the provided
-// Overlapper. Pass the Elem on deletion and Range on insertion.
-func (self *Node) adjustRange(r Overlapper) {
+// Range. Pass the Elem on deletion and Range on insertion.
+func (self *Node) adjustRangeTo(r Range) {
 	if self.Left != nil {
 		self.Range.SetMin(min(r.Min(), self.Left.Range.Min()))
 		self.Range.SetMax(max(r.Max(), self.Left.Range.Max()))
@@ -240,19 +240,19 @@ func (self *Tree) Len() int {
 
 // Get returns the a slice of Overlappers that overlap q in the Tree according
 // to Overlap.
-func (self *Tree) Get(q Overlapper) (o []Overlapper, err error) {
+func (self *Tree) Get(q Interface) (o []Interface, err error) {
 	if q.Min().Compare(q.Max()) > 0 {
 		return nil, ErrInvertedRange
 	}
-	if self.Root != nil && q.Overlap(self.Root.Range) == 0 {
-		self.Root.doMatch(func(e Overlapper) (done bool) { o = append(o, e); return }, q)
+	if self.Root != nil && q.Overlap(self.Root.Range) {
+		self.Root.doMatch(func(e Interface) (done bool) { o = append(o, e); return }, q)
 	}
 	return
 }
 
-// Insert inserts the Overlapper e into the Tree. Insertions do not replace
+// Insert inserts the Range e into the Tree. Insertions do not replace
 // existing stored intervals.
-func (self *Tree) Insert(e Overlapper) (err error) {
+func (self *Tree) Insert(e Interface) (err error) {
 	if e.Min().Compare(e.Max()) > 0 {
 		return ErrInvertedRange
 	}
@@ -263,7 +263,7 @@ func (self *Tree) Insert(e Overlapper) (err error) {
 	return
 }
 
-func (self *Node) insert(e Overlapper) (root *Node, d int) {
+func (self *Node) insert(e Interface) (root *Node, d int) {
 	if self == nil {
 		return &Node{Elem: e, Range: e.NewMutable()}, 1
 	} else if self.Elem == nil {
@@ -299,7 +299,7 @@ func (self *Node) insert(e Overlapper) (root *Node, d int) {
 		}
 	}
 
-	self.adjustRange(self.Range)
+	self.adjustRangeTo(self.Range)
 	root = self
 
 	return
@@ -371,7 +371,7 @@ func (self *Node) deleteMax() (root *Node, d int) {
 }
 
 // Delete deletes the first node found that matches e according to Overlap().
-func (self *Tree) Delete(e Overlapper) (err error) {
+func (self *Tree) Delete(e Interface) (err error) {
 	if e.Min().Compare(e.Max()) > 0 {
 		return ErrInvertedRange
 	}
@@ -388,8 +388,8 @@ func (self *Tree) Delete(e Overlapper) (err error) {
 	return
 }
 
-func (self *Node) delete(e Overlapper) (root *Node, d int) {
-	if e.Overlap(self.Elem) < 0 {
+func (self *Node) delete(e Interface) (root *Node, d int) {
+	if e.Min().Compare(self.Elem.Min()) < 0 {
 		if self.Left != nil {
 			if self.Left.color() == Black && self.Left.Left.color() == Black {
 				self = self.moveRedLeft()
@@ -403,14 +403,14 @@ func (self *Node) delete(e Overlapper) (root *Node, d int) {
 		if self.Left.color() == Red {
 			self = self.rotateRight()
 		}
-		if e.Overlap(self.Elem) == 0 && self.Right == nil {
+		if self.Right == nil && e.Overlap(self.Elem) {
 			return nil, -1
 		}
 		if self.Right != nil {
 			if self.Right.color() == Black && self.Right.Left.color() == Black {
 				self = self.moveRedRight()
 			}
-			if e.Overlap(self.Elem) == 0 {
+			if e.Overlap(self.Elem) {
 				self.Elem = self.Right.min().Elem
 				self.Right, d = self.Right.deleteMin()
 			} else {
@@ -428,7 +428,7 @@ func (self *Node) delete(e Overlapper) (root *Node, d int) {
 }
 
 // Return the left-most interval stored in the tree.
-func (self *Tree) Min() Overlapper {
+func (self *Tree) Min() Interface {
 	if self.Root == nil {
 		return nil
 	}
@@ -442,7 +442,7 @@ func (self *Node) min() (n *Node) {
 }
 
 // Return the right-most interval stored in the tree.
-func (self *Tree) Max() Overlapper {
+func (self *Tree) Max() Interface {
 	if self.Root == nil {
 		return nil
 	}
@@ -456,7 +456,7 @@ func (self *Node) max() (n *Node) {
 }
 
 // Floor returns the greatest interval equal to or less than the query q according to q.Compare(o.Min()).
-func (self *Tree) Floor(q Comparable) (o Overlapper, err error) {
+func (self *Tree) Floor(q Comparable) (o Interface, err error) {
 	if self.Root == nil {
 		return
 	}
@@ -485,7 +485,7 @@ func (self *Node) floor(m Comparable) *Node {
 }
 
 // Ceil returns the smallest value equal to or greater than the query q according to q.Compare().
-func (self *Tree) Ceil(q Comparable) (o Overlapper, err error) {
+func (self *Tree) Ceil(q Comparable) (o Interface, err error) {
 	if self.Root == nil {
 		return
 	}
@@ -513,10 +513,10 @@ func (self *Node) ceil(m Comparable) *Node {
 	return self
 }
 
-// An Operation is a function that operates on an Overlapper. If done is returned true, the
+// An Operation is a function that operates on an Range. If done is returned true, the
 // Operation is indicating that no further work needs to be done and so the Do function should
 // traverse no further.
-type Operation func(Overlapper) (done bool)
+type Operation func(Interface) (done bool)
 
 // Do performs fn on all intervals stored in the tree. A boolean is returned indicating whether the
 // Do traversal was interrupted by an Operation returning true. If fn alters stored intervals' sort
@@ -578,30 +578,30 @@ func (self *Node) doReverse(fn Operation) (done bool) {
 // the condition is independent of sort order. A boolean is returned indicating whether the Do
 // traversal was interrupted by an Operation returning true. If fn alters stored intervals' sort
 // relationships, future tree operation behaviors are undefined.
-func (self *Tree) DoMatching(fn Operation, q Overlapper) (t bool, err error) {
+func (self *Tree) DoMatching(fn Operation, q Interface) (t bool, err error) {
 	if q.Min().Compare(q.Max()) > 0 {
 		return false, ErrInvertedRange
 	}
-	if self.Root != nil && q.Overlap(self.Root.Range) == 0 {
+	if self.Root != nil && q.Overlap(self.Root.Range) {
 		return self.Root.doMatch(fn, q), nil
 	}
 	return
 }
 
-func (self *Node) doMatch(fn Operation, q Overlapper) (done bool) {
-	if self.Left != nil && q.Overlap(self.Left.Range) == 0 {
+func (self *Node) doMatch(fn Operation, q Interface) (done bool) {
+	if self.Left != nil && q.Overlap(self.Left.Range) {
 		done = self.Left.doMatch(fn, q)
 		if done {
 			return
 		}
 	}
-	if q.Overlap(self.Elem) == 0 {
+	if q.Overlap(self.Elem) {
 		done = fn(self.Elem)
 		if done {
 			return
 		}
 	}
-	if self.Right != nil && q.Overlap(self.Right.Range) == 0 {
+	if self.Right != nil && q.Overlap(self.Right.Range) {
 		done = self.Right.doMatch(fn, q)
 	}
 	return
@@ -613,30 +613,30 @@ func (self *Node) doMatch(fn Operation, q Overlapper) (done bool) {
 // the condition is independent of sort order. A boolean is returned indicating whether the Do
 // traversal was interrupted by an Operation returning true. If fn alters stored intervals' sort
 // relationships, future tree operation behaviors are undefined.
-func (self *Tree) DoMatchingReverse(fn Operation, q Overlapper) (t bool, err error) {
+func (self *Tree) DoMatchingReverse(fn Operation, q Interface) (t bool, err error) {
 	if q.Min().Compare(q.Max()) > 0 {
 		return false, ErrInvertedRange
 	}
-	if self.Root != nil && q.Overlap(self.Root.Range) == 0 {
+	if self.Root != nil && q.Overlap(self.Root.Range) {
 		return self.Root.doMatch(fn, q), nil
 	}
 	return
 }
 
-func (self *Node) doMatchReverse(fn Operation, q Overlapper) (done bool) {
-	if self.Right != nil && q.Overlap(self.Right.Range) == 0 {
+func (self *Node) doMatchReverse(fn Operation, q Interface) (done bool) {
+	if self.Right != nil && q.Overlap(self.Right.Range) {
 		done = self.Right.doMatchReverse(fn, q)
 		if done {
 			return
 		}
 	}
-	if q.Overlap(self.Elem) == 0 {
+	if q.Overlap(self.Elem) {
 		done = fn(self.Elem)
 		if done {
 			return
 		}
 	}
-	if self.Left != nil && q.Overlap(self.Left.Range) == 0 {
+	if self.Left != nil && q.Overlap(self.Left.Range) {
 		done = self.Left.doMatchReverse(fn, q)
 	}
 	return
