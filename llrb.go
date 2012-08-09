@@ -306,7 +306,9 @@ func (self *Node) deleteMax() (root *Node, d int) {
 	return
 }
 
-// Delete deletes the first node found that matches e according to Compare().
+// Delete deletes the node that matches e according to Compare(). Note that Compare must
+// identify the target node uniquely and in cases where non-unique keys are used,
+// attributes used to break ties must be used to determine tree ordering during insertion.
 func (self *Tree) Delete(e Comparable) {
 	if self.Root == nil {
 		return

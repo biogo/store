@@ -132,8 +132,14 @@ func (cr compRune) Compare(r Comparable) int {
 
 type compInt int
 
-func (ci compInt) Compare(i Comparable) int {
-	return int(ci) - int(i.(compInt))
+func (ci compInt) Compare(i Comparable) (c int) {
+	switch i := i.(type) {
+	case compIntUpper:
+		c = int(ci) - int(i)
+	case compInt:
+		c = int(ci) - int(i)
+	}
+	return c
 }
 
 type compIntUpper int
@@ -541,6 +547,61 @@ func (s *S) TestRandomDeletion(c *check.C) {
 	c.Check(*t, check.Equals, Tree{})
 }
 
+type compStructUpper struct {
+	key int
+	val byte
+}
+
+func (cs compStructUpper) Compare(s Comparable) (c int) {
+	c = cs.key - s.(compStructUpper).key
+	if c == 0 {
+		c = int(cs.val) - int(s.(compStructUpper).val)
+	}
+	return c
+}
+func (cs compStructUpper) String() string { return fmt.Sprintf("[%d:%c]", cs.key, cs.val) }
+
+func (s *S) TestNonUniqueDeletion(c *check.C) {
+	var (
+		r = []compStructUpper{{1, 'a'}, {1, 'b'}, {1, 'c'}, {0, 'd'}}
+		t = &Tree{}
+	)
+	for i, v := range r {
+		t.Insert(v)
+		c.Check(t.Len(), check.Equals, i+1)
+	}
+	for _, v := range r {
+		var dotString string
+		if *genDot && t.Len() <= *dotLimit {
+			dotString = dot(t, "TestNonUniqueDeletion_before_del")
+		}
+		t.Delete(v)
+		if t != nil {
+			failed := false
+			failed = failed || !c.Check(t.is23_234(), check.Equals, true)
+			failed = failed || !c.Check(t.isBalanced(), check.Equals, true)
+			if failed {
+				if *printTree {
+					c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
+				}
+				if *genDot && t.Len() <= *dotLimit {
+					var err error
+					err = dotFile(nil, "TestNonUniqueDeletion_before_del", dotString)
+					if err != nil {
+						c.Errorf("Dot file write failed: %v", err)
+					}
+					err = dotFile(t, "TestNonUniqueDeletion_after_del", "")
+					if err != nil {
+						c.Errorf("Dot file write failed: %v", err)
+					}
+				}
+				c.Fatal("Cannot continue test: invariant contradiction")
+			}
+		}
+	}
+	c.Check(*t, check.Equals, Tree{})
+}
+
 func (s *S) TestDeleteMinMax(c *check.C) {
 	var (
 		min, max = compRune(0), compRune(10)
@@ -750,7 +811,7 @@ func dot(t *Tree, label string) string {
 	)
 	follow = func(n *Node) {
 		id := uintptr(unsafe.Pointer(n))
-		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> %d|<Right>\"];", id, n.Elem)
+		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> %v|<Right>\"];", id, n.Elem)
 		if n.Left != nil {
 			c += fmt.Sprintf("\n\t\tedge [color=%v,arrowhead=%s]; \"%d\":Left -> \"%d\":Elem;",
 				n.Left.color(), arrows[n.Left.color()], id, uintptr(unsafe.Pointer(n.Left)))
