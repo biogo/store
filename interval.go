@@ -305,7 +305,7 @@ func (self *Node) insert(e Interface) (root *Node, d int) {
 	return
 }
 
-// DeleteMin deletes the left-most interval will be deleted.
+// DeleteMin deletes the left-most interval.
 func (self *Tree) DeleteMin() {
 	if self.Root == nil {
 		return
@@ -336,7 +336,7 @@ func (self *Node) deleteMin() (root *Node, d int) {
 	return
 }
 
-// DeleteMax deletes the right-most interval will be deleted.
+// DeleteMax deletes the right-most interval.
 func (self *Tree) DeleteMax() {
 	if self.Root == nil {
 		return
