@@ -58,6 +58,7 @@ type Range interface {
 type Interface interface {
 	Overlapper
 	Range
+	ID() Comparable      // Returns a unique ID for the element.
 	NewMutable() Mutable // Returns an mutable copy of the Interface's range.
 }
 
@@ -268,8 +269,12 @@ func (self *Node) insert(e Interface) (root *Node, d int) {
 		return &Node{Elem: e, Range: e.NewMutable()}, 1
 	} else if self.Elem == nil {
 		self.Elem = e
-		self.Range.SetMin(e.Min())
-		self.Range.SetMax(e.Max())
+		if self.Left != nil {
+			self.Range.SetMax(max(e.Max(), self.Left.Range.Max()))
+		}
+		if self.Right != nil {
+			self.Range.SetMax(max(e.Max(), self.Right.Range.Max()))
+		}
 		return self, 1
 	}
 
@@ -280,6 +285,16 @@ func (self *Node) insert(e Interface) (root *Node, d int) {
 	}
 
 	switch c := e.Min().Compare(self.Elem.Min()); {
+	case c == 0:
+		switch cid := e.ID().Compare(self.Elem.ID()); {
+		case cid == 0:
+			self.Elem = e
+			self.Range.SetMax(e.Max())
+		case cid < 0:
+			self.Left, d = self.Left.insert(e)
+		default:
+			self.Right, d = self.Right.insert(e)
+		}
 	case c < 0:
 		self.Left, d = self.Left.insert(e)
 	default:
@@ -370,7 +385,7 @@ func (self *Node) deleteMax() (root *Node, d int) {
 	return
 }
 
-// Delete deletes the first node found that matches e according to Overlap().
+// Delete deletes the element e if it exists in the Tree.
 func (self *Tree) Delete(e Interface) (err error) {
 	if e.Min().Compare(e.Max()) > 0 {
 		return ErrInvertedRange
@@ -389,7 +404,8 @@ func (self *Tree) Delete(e Interface) (err error) {
 }
 
 func (self *Node) delete(e Interface) (root *Node, d int) {
-	if e.Min().Compare(self.Elem.Min()) < 0 {
+	id := e.ID()
+	if p := e.Min().Compare(self.Elem.Min()); p < 0 || (p == 0 && id.Compare(self.Elem.ID()) < 0) {
 		if self.Left != nil && e.Overlap(self.Left.Range) {
 			if self.Left.color() == Black && self.Left.Left.color() == Black {
 				self = self.moveRedLeft()
@@ -403,14 +419,14 @@ func (self *Node) delete(e Interface) (root *Node, d int) {
 		if self.Left.color() == Red {
 			self = self.rotateRight()
 		}
-		if self.Right == nil && e.Overlap(self.Elem) {
+		if self.Right == nil && id.Compare(self.Elem.ID()) == 0 {
 			return nil, -1
 		}
-		if self.Right != nil && e.Overlap(self.Right.Range) {
+		if self.Right != nil {
 			if self.Right.color() == Black && self.Right.Left.color() == Black {
 				self = self.moveRedRight()
 			}
-			if e.Overlap(self.Elem) {
+			if id.Compare(self.Elem.ID()) == 0 {
 				self.Elem = self.Right.min().Elem
 				self.Right, d = self.Right.deleteMin()
 			} else {

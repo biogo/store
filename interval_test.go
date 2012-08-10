@@ -160,6 +160,7 @@ func (or overRune) Compare(b Comparable) int {
 func (or overRune) Overlap(b Range) bool {
 	return or == b.(overRune)
 }
+func (or overRune) ID() Comparable      { return or } // Not semantically satisfying interface, but not used.
 func (or overRune) Min() Comparable     { return or }
 func (or overRune) Max() Comparable     { return or }
 func (or overRune) SetMin(_ Comparable) {}
@@ -172,17 +173,18 @@ func (or compInt) Compare(b Comparable) int {
 	return int(or - b.(compInt))
 }
 
-type overlap struct{ start, end compInt }
+type overlap struct{ start, end, id compInt }
 
 func (o *overlap) Overlap(b Range) bool {
 	bc := b.(*overlap)
 	return o.end > bc.start && o.start < bc.end
 }
+func (o *overlap) ID() Comparable      { return o.id }
 func (o *overlap) Min() Comparable     { return o.start }
 func (o *overlap) Max() Comparable     { return o.end }
 func (o *overlap) SetMin(c Comparable) { o.start = c.(compInt) }
 func (o *overlap) SetMax(c Comparable) { o.end = c.(compInt) }
-func (o *overlap) NewMutable() Mutable { return &overlap{o.start, o.end} }
+func (o *overlap) NewMutable() Mutable { return &overlap{o.start, o.end, o.id} }
 func (o *overlap) String() string      { return fmt.Sprintf("[%d,%d)", o.start, o.end) }
 
 // Build a tree from a simplified Newick format returning the root node.
@@ -343,15 +345,15 @@ func (s *S) TestNilOperations(c *check.C) {
 func (s *S) TestRange(c *check.C) {
 	t := &Tree{}
 	for i, iv := range []*overlap{
-		{0, 2},
-		{2, 4},
-		{1, 6},
-		{3, 4},
-		{1, 3},
-		{4, 6},
-		{5, 8},
-		{6, 8},
-		{5, 9},
+		{0, 2, 0},
+		{2, 4, 0},
+		{1, 6, 0},
+		{3, 4, 0},
+		{1, 3, 0},
+		{4, 6, 0},
+		{5, 8, 0},
+		{6, 8, 0},
+		{5, 9, 0},
 	} {
 		t.Insert(iv)
 		ok := c.Check(t.isRanged(), check.Equals, true, check.Commentf("insertion %d: %v", i, iv))
@@ -403,7 +405,7 @@ func (s *S) TestDeletion(c *check.C) {
 		length   = compInt(1)
 	)
 	for i := min; i <= max; i++ {
-		t.Insert(&overlap{start: i, end: i + length})
+		t.Insert(&overlap{start: i, end: i + length, id: i})
 	}
 	for i := min; i <= max; i++ {
 		var dotString string
@@ -411,9 +413,9 @@ func (s *S) TestDeletion(c *check.C) {
 			e--
 		}
 		if *genDot && t.Len() <= *dotLimit {
-			dotString = dot(t, fmt.Sprintf("TestDeletion_before_%d", i))
+			dotString = dot(t, fmt.Sprintf("TestDeletion_before_del_%d", i))
 		}
-		t.Delete(&overlap{start: i, end: i + length})
+		t.Delete(&overlap{start: i, end: i + length, id: compInt(i)})
 		c.Check(t.Len(), check.Equals, e)
 		if i < max {
 			failed := false
@@ -580,18 +582,21 @@ func (s *S) TestRandomInsertion(c *check.C) {
 
 func (s *S) TestRandomDeletion(c *check.C) {
 	var (
-		count, max = 100, 10
+		count, max = 14, 3
 		r          = make([]overlap, count)
 		t          = &Tree{}
 		length     = compInt(1)
 	)
 	for i := range r {
 		s := compInt(rand.Intn(max))
-		v := overlap{start: s, end: s + length}
-		r[i] = v
+		r[i] = overlap{start: s, end: s + length, id: compInt(i)}
 		t.Insert(&r[i])
 	}
-	for _, v := range r {
+	for i, v := range r {
+		var dotString string
+		if *genDot && t.Len() <= *dotLimit {
+			dotString = dot(t, fmt.Sprintf("TestRandomDeletion_before_del_%d_%d_%d", i, v.start, v.end))
+		}
 		t.Delete(&v)
 		if t != nil {
 			failed := false
@@ -604,7 +609,12 @@ func (s *S) TestRandomDeletion(c *check.C) {
 					c.Logf("Failing tree: %s\n\n", describeTree(t.Root, false, true))
 				}
 				if *genDot && t.Len() <= *dotLimit {
-					err := dotFile(t, fmt.Sprintf("TestRandomDeletion_after_del_%d_%d", v.start, v.end), "")
+					var err error
+					err = dotFile(nil, fmt.Sprintf("TestRandomDeletion_before_del_%d_%d_%d", i, v.start, v.end), dotString)
+					if err != nil {
+						c.Errorf("Dot file write failed: %v", err)
+					}
+					err = dotFile(t, fmt.Sprintf("TestRandomDeletion_after_del_%d_%d_%d", i, v.start, v.end), "")
 					if err != nil {
 						c.Errorf("Dot file write failed: %v", err)
 					}
@@ -691,8 +701,8 @@ func dot(t *Tree, label string) string {
 	)
 	follow = func(n *Node) {
 		id := uintptr(unsafe.Pointer(n))
-		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> interval:%v\\nrange:%v\\nid:%0x|<Right>\"];",
-			id, n.Elem, n.Range, uintptr(unsafe.Pointer(n)))
+		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> interval:%v\\nrange:%v\\nid:%d|<Right>\"];",
+			id, n.Elem, n.Range, n.Elem.ID())
 		if n.Left != nil {
 			c += fmt.Sprintf("\n\t\tedge [color=%v,arrowhead=%s]; \"%d\":Left -> \"%d\":Elem;",
 				n.Left.color(), arrows[n.Left.color()], id, uintptr(unsafe.Pointer(n.Left)))
@@ -741,7 +751,7 @@ func BenchmarkInsert(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length})
+		t.Insert(&overlap{start: s, end: s + length, id: s})
 	}
 }
 
@@ -754,7 +764,7 @@ func BenchmarkGet(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length})
+		t.Insert(&overlap{start: s, end: s + length, id: s})
 	}
 	b.StartTimer()
 	for i := compInt(0); i < N; i++ {
@@ -772,7 +782,7 @@ func BenchmarkMin(b *testing.B) {
 	)
 	for i := compInt(0); i < 1e5; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length})
+		t.Insert(&overlap{start: s, end: s + length, id: s})
 	}
 	b.StartTimer()
 	var m Interface
@@ -791,7 +801,7 @@ func BenchmarkMax(b *testing.B) {
 	)
 	for i := compInt(0); i < 1e5; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length})
+		t.Insert(&overlap{start: s, end: s + length, id: s})
 	}
 	b.StartTimer()
 	var m Interface
@@ -810,12 +820,12 @@ func BenchmarkDelete(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length})
+		t.Insert(&overlap{start: s, end: s + length, id: s})
 	}
 	b.StartTimer()
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Delete(&overlap{start: s, end: s + length})
+		t.Delete(&overlap{start: s, end: s + length, id: s})
 	}
 }
 
@@ -828,7 +838,7 @@ func BenchmarkDeleteMin(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length})
+		t.Insert(&overlap{start: s, end: s + length, id: s})
 	}
 	b.StartTimer()
 	for i := compInt(0); i < N; i++ {
