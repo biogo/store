@@ -336,9 +336,9 @@ func (s *S) TestNilOperations(c *check.C) {
 	if Mode == TD234 {
 		return
 	}
-	t.DeleteMin()
+	t.DeleteMin(false)
 	c.Check(*t, check.Equals, Tree{})
-	t.DeleteMax()
+	t.DeleteMax(false)
 	c.Check(*t, check.Equals, Tree{})
 }
 
@@ -355,7 +355,7 @@ func (s *S) TestRange(c *check.C) {
 		{6, 8, 0},
 		{5, 9, 0},
 	} {
-		t.Insert(iv)
+		t.Insert(iv, false)
 		ok := c.Check(t.isRanged(), check.Equals, true, check.Commentf("insertion %d: %v", i, iv))
 		if !ok && *genDot && t.Len() <= *dotLimit {
 			err := dotFile(t, fmt.Sprintf("TestRange_%d", i), "")
@@ -373,7 +373,7 @@ func (s *S) TestInsertion(c *check.C) {
 		length   = compInt(100)
 	)
 	for i := min; i <= max; i++ {
-		t.Insert(&overlap{start: i, end: i + length})
+		t.Insert(&overlap{start: i, end: i + length}, false)
 		c.Check(t.Len(), check.Equals, int(i+1))
 		failed := false
 		failed = failed || !c.Check(t.isBST(), check.Equals, true)
@@ -397,6 +397,25 @@ func (s *S) TestInsertion(c *check.C) {
 	c.Check(t.Max().Min(), check.DeepEquals, max)
 }
 
+func (s *S) TestFastInsertion(c *check.C) {
+	var (
+		min, max = compInt(0), compInt(1000)
+		t        = &Tree{}
+		length   = compInt(100)
+	)
+	for i := min; i <= max; i++ {
+		t.Insert(&overlap{start: i, end: i + length}, true)
+		c.Check(t.Len(), check.Equals, int(i+1))
+		c.Check(t.isBST(), check.Equals, true)
+		c.Check(t.is23_234(), check.Equals, true)
+		c.Check(t.isBalanced(), check.Equals, true)
+	}
+	t.AdjustRanges()
+	c.Check(t.isRanged(), check.Equals, true)
+	c.Check(t.Min().Min(), check.DeepEquals, min)
+	c.Check(t.Max().Min(), check.DeepEquals, max)
+}
+
 func (s *S) TestDeletion(c *check.C) {
 	var (
 		min, max = compInt(0), compInt(1000)
@@ -405,7 +424,7 @@ func (s *S) TestDeletion(c *check.C) {
 		length   = compInt(1)
 	)
 	for i := min; i <= max; i++ {
-		t.Insert(&overlap{start: i, end: i + length, id: i})
+		t.Insert(&overlap{start: i, end: i + length, id: i}, false)
 	}
 	for i := min; i <= max; i++ {
 		var dotString string
@@ -415,7 +434,7 @@ func (s *S) TestDeletion(c *check.C) {
 		if *genDot && t.Len() <= *dotLimit {
 			dotString = dot(t, fmt.Sprintf("TestDeletion_before_del_%d", i))
 		}
-		t.Delete(&overlap{start: i, end: i + length, id: compInt(i)})
+		t.Delete(&overlap{start: i, end: i + length, id: compInt(i)}, false)
 		c.Check(t.Len(), check.Equals, e)
 		if i < max {
 			failed := false
@@ -445,6 +464,28 @@ func (s *S) TestDeletion(c *check.C) {
 	c.Check(*t, check.Equals, Tree{})
 }
 
+func (s *S) TestFastDeletion(c *check.C) {
+	var (
+		min, max = compInt(0), compInt(1000)
+		t        = &Tree{}
+		length   = compInt(1)
+	)
+	for i := min; i <= max; i++ {
+		t.Insert(&overlap{start: i, end: i + length, id: i}, false)
+	}
+	for i := min; i <= max; i++ {
+		t.Delete(&overlap{start: i, end: i + length, id: compInt(i)}, true)
+		c.Check(t.isBST(), check.Equals, true)
+		c.Check(t.is23_234(), check.Equals, true)
+		c.Check(t.isBalanced(), check.Equals, true)
+		if i == max/2 {
+			t.AdjustRanges()
+			c.Check(t.isRanged(), check.Equals, true)
+		}
+	}
+	c.Check(*t, check.Equals, Tree{})
+}
+
 func (s *S) TestGet(c *check.C) {
 	var (
 		min, max = compInt(0), compInt(1000)
@@ -452,7 +493,7 @@ func (s *S) TestGet(c *check.C) {
 	)
 	for i := min; i <= max; i++ {
 		if i&1 == 0 {
-			t.Insert(&overlap{start: i, end: i + 1})
+			t.Insert(&overlap{start: i, end: i + 1}, false)
 		}
 	}
 	for i := min; i <= max; i++ {
@@ -472,7 +513,7 @@ func (s *S) TestFloor(c *check.C) {
 	t := &Tree{}
 	for i := min; i <= max; i++ {
 		if i&1 == 0 { // Insert even numbers only.
-			t.Insert(&overlap{start: i, end: i + 1})
+			t.Insert(&overlap{start: i, end: i + 1}, false)
 		}
 	}
 	for i := min; i <= max; i++ {
@@ -492,7 +533,7 @@ func (s *S) TestCeil(c *check.C) {
 	t := &Tree{}
 	for i := min; i <= max; i++ {
 		if i&1 == 1 { // Insert odd numbers only.
-			t.Insert(&overlap{start: i, end: i + 1})
+			t.Insert(&overlap{start: i, end: i + 1}, false)
 		}
 	}
 	for i := min; i < max; i++ {
@@ -518,7 +559,7 @@ func (s *S) TestRandomlyInsertedGet(c *check.C) {
 	for i := 0; i < count; i++ {
 		s := compInt(rand.Intn(max))
 		v := overlap{start: s, end: s + length}
-		t.Insert(&v)
+		t.Insert(&v, false)
 		verify[v] = struct{}{}
 	}
 	// Random fetch order.
@@ -559,7 +600,7 @@ func (s *S) TestRandomInsertion(c *check.C) {
 	for i := 0; i < count; i++ {
 		s := compInt(rand.Intn(max))
 		v := overlap{start: s, end: s + length}
-		t.Insert(&v)
+		t.Insert(&v, false)
 		failed := false
 		failed = failed || !c.Check(t.isBST(), check.Equals, true)
 		failed = failed || !c.Check(t.is23_234(), check.Equals, true)
@@ -590,14 +631,14 @@ func (s *S) TestRandomDeletion(c *check.C) {
 	for i := range r {
 		s := compInt(rand.Intn(max))
 		r[i] = overlap{start: s, end: s + length, id: compInt(i)}
-		t.Insert(&r[i])
+		t.Insert(&r[i], false)
 	}
 	for i, v := range r {
 		var dotString string
 		if *genDot && t.Len() <= *dotLimit {
 			dotString = dot(t, fmt.Sprintf("TestRandomDeletion_before_del_%d_%d_%d", i, v.start, v.end))
 		}
-		t.Delete(&v)
+		t.Delete(&v, false)
 		if t != nil {
 			failed := false
 			failed = failed || !c.Check(t.isBST(), check.Equals, true)
@@ -635,13 +676,13 @@ func (s *S) TestDeleteMinMax(c *check.C) {
 	)
 	for i := min; i <= max; i++ {
 		v := overlap{start: i, end: i + length}
-		t.Insert(&v)
+		t.Insert(&v, false)
 		dI = t.Len()
 	}
 	c.Check(dI, check.Equals, int(max-min+1))
 	for i, m := 0, int(max); i < m/2; i++ {
 		var failed bool
-		t.DeleteMin()
+		t.DeleteMin(false)
 		dI--
 		c.Check(t.Len(), check.Equals, dI)
 		min++
@@ -662,7 +703,7 @@ func (s *S) TestDeleteMinMax(c *check.C) {
 			}
 			c.Fatal("Cannot continue test: invariant contradiction")
 		}
-		t.DeleteMax()
+		t.DeleteMax(false)
 		dI--
 		c.Check(t.Len(), check.Equals, dI)
 		max--
@@ -751,7 +792,19 @@ func BenchmarkInsert(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s})
+		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
+	}
+}
+
+func BenchmarkFastInsert(b *testing.B) {
+	var (
+		t      = &Tree{}
+		length = compInt(10)
+		N      = compInt(b.N)
+	)
+	for i := compInt(0); i < N; i++ {
+		s := N - i
+		t.Insert(&overlap{start: s, end: s + length, id: s}, true)
 	}
 }
 
@@ -764,7 +817,7 @@ func BenchmarkGet(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s})
+		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
 	}
 	b.StartTimer()
 	for i := compInt(0); i < N; i++ {
@@ -782,7 +835,7 @@ func BenchmarkMin(b *testing.B) {
 	)
 	for i := compInt(0); i < 1e5; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s})
+		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
 	}
 	b.StartTimer()
 	var m Interface
@@ -801,7 +854,7 @@ func BenchmarkMax(b *testing.B) {
 	)
 	for i := compInt(0); i < 1e5; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s})
+		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
 	}
 	b.StartTimer()
 	var m Interface
@@ -820,12 +873,30 @@ func BenchmarkDelete(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s})
+		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
 	}
 	b.StartTimer()
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Delete(&overlap{start: s, end: s + length, id: s})
+		t.Delete(&overlap{start: s, end: s + length, id: s}, false)
+	}
+}
+
+func BenchmarkFastDelete(b *testing.B) {
+	b.StopTimer()
+	var (
+		t      = &Tree{}
+		length = compInt(1)
+		N      = compInt(b.N)
+	)
+	for i := compInt(0); i < N; i++ {
+		s := N - i
+		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
+	}
+	b.StartTimer()
+	for i := compInt(0); i < N; i++ {
+		s := N - i
+		t.Delete(&overlap{start: s, end: s + length, id: s}, true)
 	}
 }
 
@@ -838,10 +909,27 @@ func BenchmarkDeleteMin(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s})
+		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
 	}
 	b.StartTimer()
 	for i := compInt(0); i < N; i++ {
-		t.DeleteMin()
+		t.DeleteMin(false)
+	}
+}
+
+func BenchmarkFastDeleteMin(b *testing.B) {
+	b.StopTimer()
+	var (
+		t      = &Tree{}
+		length = compInt(10)
+		N      = compInt(b.N)
+	)
+	for i := compInt(0); i < N; i++ {
+		s := N - i
+		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
+	}
+	b.StartTimer()
+	for i := compInt(0); i < N; i++ {
+		t.DeleteMin(true)
 	}
 }

@@ -168,8 +168,10 @@ func (self *Node) flipColors() {
 
 // fixUp ensures that black link balance is correct, that red nodes lean left,
 // and that 4 nodes are split in the case of BU23 and properly balanced in TD234.
-func (self *Node) fixUp() *Node {
-	self.adjustRange()
+func (self *Node) fixUp(fast bool) *Node {
+	if !fast {
+		self.adjustRange()
+	}
 	if self.Right.color() == Red {
 		if Mode == TD234 && self.Right.Left.color() == Red {
 			self.Right = self.Right.rotateRight()
@@ -251,29 +253,45 @@ func (self *Tree) Get(q Interface) (o []Interface, err error) {
 	return
 }
 
+// AdjustRanges fixes range fields for all Nodes in the Tree. This must be called
+// before Get or DoMatching* is used if fast insertion or deletion has been performed.
+func (self *Tree) AdjustRanges() {
+	if self.Root == nil {
+		return
+	}
+	self.Root.adjustRanges()
+}
+
+func (self *Node) adjustRanges() {
+	if self.Left != nil {
+		self.Left.adjustRanges()
+	}
+	if self.Right != nil {
+		self.Right.adjustRanges()
+	}
+	self.adjustRange()
+}
+
 // Insert inserts the Interface e into the Tree. Insertions may replace
 // existing stored intervals.
-func (self *Tree) Insert(e Interface) (err error) {
+func (self *Tree) Insert(e Interface, fast bool) (err error) {
 	if e.Min().Compare(e.Max()) > 0 {
 		return ErrInvertedRange
 	}
 	var d int
-	self.Root, d = self.Root.insert(e)
+	self.Root, d = self.Root.insert(e, fast)
 	self.Count += d
 	self.Root.Color = Black
 	return
 }
 
-func (self *Node) insert(e Interface) (root *Node, d int) {
+func (self *Node) insert(e Interface, fast bool) (root *Node, d int) {
 	if self == nil {
 		return &Node{Elem: e, Range: e.NewMutable()}, 1
 	} else if self.Elem == nil {
 		self.Elem = e
-		if self.Left != nil {
-			self.Range.SetMax(max(e.Max(), self.Left.Range.Max()))
-		}
-		if self.Right != nil {
-			self.Range.SetMax(max(e.Max(), self.Right.Range.Max()))
+		if !fast {
+			self.adjustRange()
 		}
 		return self, 1
 	}
@@ -289,16 +307,18 @@ func (self *Node) insert(e Interface) (root *Node, d int) {
 		switch cid := e.ID().Compare(self.Elem.ID()); {
 		case cid == 0:
 			self.Elem = e
-			self.Range.SetMax(e.Max())
+			if !fast {
+				self.Range.SetMax(e.Max())
+			}
 		case cid < 0:
-			self.Left, d = self.Left.insert(e)
+			self.Left, d = self.Left.insert(e, fast)
 		default:
-			self.Right, d = self.Right.insert(e)
+			self.Right, d = self.Right.insert(e, fast)
 		}
 	case c < 0:
-		self.Left, d = self.Left.insert(e)
+		self.Left, d = self.Left.insert(e, fast)
 	default:
-		self.Right, d = self.Right.insert(e)
+		self.Right, d = self.Right.insert(e, fast)
 	}
 
 	if self.Right.color() == Red && self.Left.color() == Black {
@@ -314,19 +334,21 @@ func (self *Node) insert(e Interface) (root *Node, d int) {
 		}
 	}
 
-	self.adjustRange()
+	if !fast {
+		self.adjustRange()
+	}
 	root = self
 
 	return
 }
 
 // DeleteMin deletes the left-most interval.
-func (self *Tree) DeleteMin() {
+func (self *Tree) DeleteMin(fast bool) {
 	if self.Root == nil {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.deleteMin()
+	self.Root, d = self.Root.deleteMin(fast)
 	self.Count += d
 	if self.Root == nil {
 		return
@@ -334,30 +356,30 @@ func (self *Tree) DeleteMin() {
 	self.Root.Color = Black
 }
 
-func (self *Node) deleteMin() (root *Node, d int) {
+func (self *Node) deleteMin(fast bool) (root *Node, d int) {
 	if self.Left == nil {
 		return nil, -1
 	}
 	if self.Left.color() == Black && self.Left.Left.color() == Black {
 		self = self.moveRedLeft()
 	}
-	self.Left, d = self.Left.deleteMin()
+	self.Left, d = self.Left.deleteMin(fast)
 	if self.Left == nil {
 		self.Range.SetMin(self.Elem.Min())
 	}
 
-	root = self.fixUp()
+	root = self.fixUp(fast)
 
 	return
 }
 
 // DeleteMax deletes the right-most interval.
-func (self *Tree) DeleteMax() {
+func (self *Tree) DeleteMax(fast bool) {
 	if self.Root == nil {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.deleteMax()
+	self.Root, d = self.Root.deleteMax(fast)
 	self.Count += d
 	if self.Root == nil {
 		return
@@ -365,7 +387,7 @@ func (self *Tree) DeleteMax() {
 	self.Root.Color = Black
 }
 
-func (self *Node) deleteMax() (root *Node, d int) {
+func (self *Node) deleteMax(fast bool) (root *Node, d int) {
 	if self.Left != nil && self.Left.color() == Red {
 		self = self.rotateRight()
 	}
@@ -375,18 +397,18 @@ func (self *Node) deleteMax() (root *Node, d int) {
 	if self.Right.color() == Black && self.Right.Left.color() == Black {
 		self = self.moveRedRight()
 	}
-	self.Right, d = self.Right.deleteMax()
+	self.Right, d = self.Right.deleteMax(fast)
 	if self.Right == nil {
 		self.Range.SetMax(self.Elem.Max())
 	}
 
-	root = self.fixUp()
+	root = self.fixUp(fast)
 
 	return
 }
 
 // Delete deletes the element e if it exists in the Tree.
-func (self *Tree) Delete(e Interface) (err error) {
+func (self *Tree) Delete(e Interface, fast bool) (err error) {
 	if e.Min().Compare(e.Max()) > 0 {
 		return ErrInvertedRange
 	}
@@ -394,7 +416,7 @@ func (self *Tree) Delete(e Interface) (err error) {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.delete(e)
+	self.Root, d = self.Root.delete(e, fast)
 	self.Count += d
 	if self.Root == nil {
 		return
@@ -403,14 +425,14 @@ func (self *Tree) Delete(e Interface) (err error) {
 	return
 }
 
-func (self *Node) delete(e Interface) (root *Node, d int) {
+func (self *Node) delete(e Interface, fast bool) (root *Node, d int) {
 	id := e.ID()
 	if p := e.Min().Compare(self.Elem.Min()); p < 0 || (p == 0 && id.Compare(self.Elem.ID()) < 0) {
 		if self.Left != nil && e.Overlap(self.Left.Range) {
 			if self.Left.color() == Black && self.Left.Left.color() == Black {
 				self = self.moveRedLeft()
 			}
-			self.Left, d = self.Left.delete(e)
+			self.Left, d = self.Left.delete(e, fast)
 			if self.Left == nil {
 				self.Range.SetMin(self.Elem.Min())
 			}
@@ -428,9 +450,9 @@ func (self *Node) delete(e Interface) (root *Node, d int) {
 			}
 			if id.Compare(self.Elem.ID()) == 0 {
 				self.Elem = self.Right.min().Elem
-				self.Right, d = self.Right.deleteMin()
+				self.Right, d = self.Right.deleteMin(fast)
 			} else {
-				self.Right, d = self.Right.delete(e)
+				self.Right, d = self.Right.delete(e, fast)
 			}
 			if self.Right == nil {
 				self.Range.SetMax(self.Elem.Max())
@@ -438,7 +460,7 @@ func (self *Node) delete(e Interface) (root *Node, d int) {
 		}
 	}
 
-	root = self.fixUp()
+	root = self.fixUp(fast)
 
 	return
 }

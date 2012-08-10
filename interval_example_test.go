@@ -74,7 +74,7 @@ func Example() {
 	t := &interval.Tree{}
 	for i, iv := range ivs {
 		iv.UID = Int(i)
-		err := t.Insert(iv)
+		err := t.Insert(iv, false)
 		if err != nil {
 			fmt.Println(err)
 		}
