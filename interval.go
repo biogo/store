@@ -239,7 +239,7 @@ func (self *Tree) Len() int {
 	return self.Count
 }
 
-// Get returns the a slice of Overlappers that overlap q in the Tree according
+// Get returns the a slice of Interfaces that overlap q in the Tree according
 // to Overlap.
 func (self *Tree) Get(q Interface) (o []Interface, err error) {
 	if q.Min().Compare(q.Max()) > 0 {
@@ -251,7 +251,7 @@ func (self *Tree) Get(q Interface) (o []Interface, err error) {
 	return
 }
 
-// Insert inserts the Range e into the Tree. Insertions do not replace
+// Insert inserts the Interface e into the Tree. Insertions may replace
 // existing stored intervals.
 func (self *Tree) Insert(e Interface) (err error) {
 	if e.Min().Compare(e.Max()) > 0 {
@@ -471,7 +471,7 @@ func (self *Node) max() (n *Node) {
 	return
 }
 
-// Floor returns the greatest interval equal to or less than the query q according to q.Compare(o.Min()).
+// Floor returns the greatest interval equal to or less than the query q according to q.Compare().
 func (self *Tree) Floor(q Comparable) (o Interface, err error) {
 	if self.Root == nil {
 		return
