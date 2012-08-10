@@ -168,7 +168,7 @@ func (self *Node) flipColors() {
 // fixUp ensures that black link balance is correct, that red nodes lean left,
 // and that 4 nodes are split in the case of BU23 and properly balanced in TD234.
 func (self *Node) fixUp() *Node {
-	self.adjustRangeTo(self.Elem)
+	self.adjustRange()
 	if self.Right.color() == Red {
 		if Mode == TD234 && self.Right.Left.color() == Red {
 			self.Right = self.Right.rotateRight()
@@ -185,15 +185,15 @@ func (self *Node) fixUp() *Node {
 	return self
 }
 
-// adjustRange sets the Range to the maximum extent of the Range and the provided
-// Range. Pass the Elem on deletion and Range on insertion.
-func (self *Node) adjustRangeTo(r Range) {
+// adjustRange sets the Range to the maximum extent of the childrens' Range
+// spans and the node's Elem span.
+func (self *Node) adjustRange() {
 	if self.Left != nil {
-		self.Range.SetMin(min(r.Min(), self.Left.Range.Min()))
-		self.Range.SetMax(max(r.Max(), self.Left.Range.Max()))
+		self.Range.SetMin(min(self.Elem.Min(), self.Left.Range.Min()))
+		self.Range.SetMax(max(self.Elem.Max(), self.Left.Range.Max()))
 	}
 	if self.Right != nil {
-		self.Range.SetMax(max(r.Max(), self.Right.Range.Max()))
+		self.Range.SetMax(max(self.Elem.Max(), self.Right.Range.Max()))
 	}
 }
 
@@ -299,7 +299,7 @@ func (self *Node) insert(e Interface) (root *Node, d int) {
 		}
 	}
 
-	self.adjustRangeTo(self.Range)
+	self.adjustRange()
 	root = self
 
 	return
