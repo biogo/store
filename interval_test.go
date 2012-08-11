@@ -428,7 +428,7 @@ func (s *S) TestDeletion(c *check.C) {
 	}
 	for i := min; i <= max; i++ {
 		var dotString string
-		if o, _ := t.Get(&overlap{start: i, end: i + length}); o != nil {
+		if o := t.Get(&overlap{start: i, end: i + length}); o != nil {
 			e--
 		}
 		if *genDot && t.Len() <= *dotLimit {
@@ -498,11 +498,11 @@ func (s *S) TestGet(c *check.C) {
 	}
 	for i := min; i <= max; i++ {
 		if i&1 == 0 {
-			o, _ := t.Get(&overlap{start: i, end: i + 1})
+			o := t.Get(&overlap{start: i, end: i + 1})
 			c.Check(len(o), check.Equals, 1)                                // Check inserted elements are present.
 			c.Check(o[0], check.DeepEquals, &overlap{start: i, end: i + 1}) // Check inserted elements are correct.
 		} else {
-			o, _ := t.Get(&overlap{start: i, end: i + 1})
+			o := t.Get(&overlap{start: i, end: i + 1})
 			c.Check(o, check.DeepEquals, []Interface(nil)) // Check inserted elements are absent.
 		}
 	}
@@ -564,7 +564,7 @@ func (s *S) TestRandomlyInsertedGet(c *check.C) {
 	}
 	// Random fetch order.
 	for v := range verify {
-		o, _ := t.Get(&v)
+		o := t.Get(&v)
 		c.Check(len(o), check.Not(check.Equals), 0) // Check inserted elements are present.
 		for _, iv := range o {
 			vr := *iv.(*overlap)
@@ -584,7 +584,7 @@ func (s *S) TestRandomlyInsertedGet(c *check.C) {
 	// Check all possible insertions.
 	for s := compInt(0); s <= compInt(max); s++ {
 		v := overlap{start: s, end: s + length}
-		o, _ := t.Get(&v)
+		o := t.Get(&v)
 		if _, ok := verify[v]; ok {
 			c.Check(len(o), check.Not(check.Equals), 0) // Check inserted elements are present.
 		}

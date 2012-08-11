@@ -243,10 +243,7 @@ func (self *Tree) Len() int {
 
 // Get returns the a slice of Interfaces that overlap q in the Tree according
 // to Overlap.
-func (self *Tree) Get(q Interface) (o []Interface, err error) {
-	if q.Min().Compare(q.Max()) > 0 {
-		return nil, ErrInvertedRange
-	}
+func (self *Tree) Get(q Overlapper) (o []Interface) {
 	if self.Root != nil && q.Overlap(self.Root.Range) {
 		self.Root.doMatch(func(e Interface) (done bool) { o = append(o, e); return }, q)
 	}
@@ -616,17 +613,14 @@ func (self *Node) doReverse(fn Operation) (done bool) {
 // the condition is independent of sort order. A boolean is returned indicating whether the Do
 // traversal was interrupted by an Operation returning true. If fn alters stored intervals' sort
 // relationships, future tree operation behaviors are undefined.
-func (self *Tree) DoMatching(fn Operation, q Interface) (t bool, err error) {
-	if q.Min().Compare(q.Max()) > 0 {
-		return false, ErrInvertedRange
-	}
+func (self *Tree) DoMatching(fn Operation, q Overlapper) (t bool) {
 	if self.Root != nil && q.Overlap(self.Root.Range) {
-		return self.Root.doMatch(fn, q), nil
+		return self.Root.doMatch(fn, q)
 	}
 	return
 }
 
-func (self *Node) doMatch(fn Operation, q Interface) (done bool) {
+func (self *Node) doMatch(fn Operation, q Overlapper) (done bool) {
 	if self.Left != nil && q.Overlap(self.Left.Range) {
 		done = self.Left.doMatch(fn, q)
 		if done {
@@ -651,17 +645,14 @@ func (self *Node) doMatch(fn Operation, q Interface) (done bool) {
 // the condition is independent of sort order. A boolean is returned indicating whether the Do
 // traversal was interrupted by an Operation returning true. If fn alters stored intervals' sort
 // relationships, future tree operation behaviors are undefined.
-func (self *Tree) DoMatchingReverse(fn Operation, q Interface) (t bool, err error) {
-	if q.Min().Compare(q.Max()) > 0 {
-		return false, ErrInvertedRange
-	}
+func (self *Tree) DoMatchingReverse(fn Operation, q Overlapper) (t bool) {
 	if self.Root != nil && q.Overlap(self.Root.Range) {
-		return self.Root.doMatch(fn, q), nil
+		return self.Root.doMatch(fn, q)
 	}
 	return
 }
 
-func (self *Node) doMatchReverse(fn Operation, q Interface) (done bool) {
+func (self *Node) doMatchReverse(fn Operation, q Overlapper) (done bool) {
 	if self.Right != nil && q.Overlap(self.Right.Range) {
 		done = self.Right.doMatchReverse(fn, q)
 		if done {

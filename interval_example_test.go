@@ -80,11 +80,7 @@ func Example() {
 		}
 	}
 
-	results, err := t.Get(Interval{Start: 3, End: 6})
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(results)
+	fmt.Println(t.Get(Interval{Start: 3, End: 6}))
 
 	// Output:
 	// [[1,6)#2 [2,4)#1 [3,4)#3 [4,6)#5 [5,8)#6 [5,9)#8]
