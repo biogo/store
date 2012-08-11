@@ -54,8 +54,7 @@ type Range interface {
 	Max() Comparable
 }
 
-// An Interface is an Overlapper that can be inserted into a Tree or used as a range
-// or equality query on the tree,
+// An Interface is a type that can be inserted into a Tree.
 type Interface interface {
 	Overlapper
 	Range
@@ -63,7 +62,7 @@ type Interface interface {
 	NewMutable() Mutable // Returns an mutable copy of the Interface's range.
 }
 
-// A Mutable is an Overlapper that can have its range altered.
+// A Mutable is a Range that can have its range altered.
 type Mutable interface {
 	Range
 	SetMin(Comparable) // Set the minimum value.
@@ -224,7 +223,7 @@ func (self *Tree) Len() int {
 	return self.Count
 }
 
-// Get returns the a slice of Interfaces that overlap q in the Tree according
+// Get returns a slice of Interfaces that overlap q in the Tree according
 // to Overlap.
 func (self *Tree) Get(q Overlapper) (o []Interface) {
 	if self.Root != nil && q.Overlap(self.Root.Range) {
@@ -531,7 +530,7 @@ func (self *Node) ceil(m Comparable) *Node {
 	return self
 }
 
-// An Operation is a function that operates on an Range. If done is returned true, the
+// An Operation is a function that operates on an Interface. If done is returned true, the
 // Operation is indicating that no further work needs to be done and so the Do function should
 // traverse no further.
 type Operation func(Interface) (done bool)
