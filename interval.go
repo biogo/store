@@ -18,6 +18,7 @@
 package interval
 
 import (
+	"code.google.com/p/biogo.llrb"
 	"errors"
 )
 
@@ -82,30 +83,12 @@ type Comparable interface {
 	Compare(Comparable) int
 }
 
-// A Color represents the color of a Node.
-type Color bool
-
-// String returns a string representation of a Color.
-func (c Color) String() string {
-	if c {
-		return "Black"
-	}
-	return "Red"
-}
-
-const (
-	// Red as false give us the defined behaviour that new nodes are red. Although this
-	// is incorrect for the root node, that is resolved on the first insertion.
-	Red   Color = false
-	Black Color = true
-)
-
 // A Node represents a node in the LLRB tree.
 type Node struct {
 	Elem        Interface
 	Range       Mutable
 	Left, Right *Node
-	Color       Color
+	Color       llrb.Color
 }
 
 // A Tree manages the root node of an interval tree. Public methods are exposed through this type.
@@ -117,9 +100,9 @@ type Tree struct {
 // Helper methods
 
 // color returns the effect color of a Node. A nil node returns black.
-func (self *Node) color() Color {
+func (self *Node) color() llrb.Color {
 	if self == nil {
-		return Black
+		return llrb.Black
 	}
 	return self.Color
 }
@@ -137,7 +120,7 @@ func (self *Node) rotateLeft() (root *Node) {
 	self.Right = root.Left
 	root.Left = self
 	root.Color = self.Color
-	self.Color = Red
+	self.Color = llrb.Red
 	return
 }
 
@@ -154,7 +137,7 @@ func (self *Node) rotateRight() (root *Node) {
 	self.Left = root.Right
 	root.Right = self
 	root.Color = self.Color
-	self.Color = Red
+	self.Color = llrb.Red
 	return
 }
 
@@ -172,16 +155,16 @@ func (self *Node) fixUp(fast bool) *Node {
 	if !fast {
 		self.adjustRange()
 	}
-	if self.Right.color() == Red {
-		if Mode == TD234 && self.Right.Left.color() == Red {
+	if self.Right.color() == llrb.Red {
+		if Mode == TD234 && self.Right.Left.color() == llrb.Red {
 			self.Right = self.Right.rotateRight()
 		}
 		self = self.rotateLeft()
 	}
-	if self.Left.color() == Red && self.Left.Left.color() == Red {
+	if self.Left.color() == llrb.Red && self.Left.Left.color() == llrb.Red {
 		self = self.rotateRight()
 	}
-	if Mode == BU23 && self.Left.color() == Red && self.Right.color() == Red {
+	if Mode == BU23 && self.Left.color() == llrb.Red && self.Right.color() == llrb.Red {
 		self.flipColors()
 	}
 
@@ -216,11 +199,11 @@ func max(a, b Comparable) Comparable {
 
 func (self *Node) moveRedLeft() *Node {
 	self.flipColors()
-	if self.Right.Left.color() == Red {
+	if self.Right.Left.color() == llrb.Red {
 		self.Right = self.Right.rotateRight()
 		self = self.rotateLeft()
 		self.flipColors()
-		if Mode == TD234 && self.Right.Right.color() == Red {
+		if Mode == TD234 && self.Right.Right.color() == llrb.Red {
 			self.Right = self.Right.rotateLeft()
 		}
 	}
@@ -229,7 +212,7 @@ func (self *Node) moveRedLeft() *Node {
 
 func (self *Node) moveRedRight() *Node {
 	self.flipColors()
-	if self.Left.Left.color() == Red {
+	if self.Left.Left.color() == llrb.Red {
 		self = self.rotateRight()
 		self.flipColors()
 	}
@@ -278,7 +261,7 @@ func (self *Tree) Insert(e Interface, fast bool) (err error) {
 	var d int
 	self.Root, d = self.Root.insert(e, fast)
 	self.Count += d
-	self.Root.Color = Black
+	self.Root.Color = llrb.Black
 	return
 }
 
@@ -294,7 +277,7 @@ func (self *Node) insert(e Interface, fast bool) (root *Node, d int) {
 	}
 
 	if Mode == TD234 {
-		if self.Left.color() == Red && self.Right.color() == Red {
+		if self.Left.color() == llrb.Red && self.Right.color() == llrb.Red {
 			self.flipColors()
 		}
 	}
@@ -318,15 +301,15 @@ func (self *Node) insert(e Interface, fast bool) (root *Node, d int) {
 		self.Right, d = self.Right.insert(e, fast)
 	}
 
-	if self.Right.color() == Red && self.Left.color() == Black {
+	if self.Right.color() == llrb.Red && self.Left.color() == llrb.Black {
 		self = self.rotateLeft()
 	}
-	if self.Left.color() == Red && self.Left.Left.color() == Red {
+	if self.Left.color() == llrb.Red && self.Left.Left.color() == llrb.Red {
 		self = self.rotateRight()
 	}
 
 	if Mode == BU23 {
-		if self.Left.color() == Red && self.Right.color() == Red {
+		if self.Left.color() == llrb.Red && self.Right.color() == llrb.Red {
 			self.flipColors()
 		}
 	}
@@ -350,14 +333,14 @@ func (self *Tree) DeleteMin(fast bool) {
 	if self.Root == nil {
 		return
 	}
-	self.Root.Color = Black
+	self.Root.Color = llrb.Black
 }
 
 func (self *Node) deleteMin(fast bool) (root *Node, d int) {
 	if self.Left == nil {
 		return nil, -1
 	}
-	if self.Left.color() == Black && self.Left.Left.color() == Black {
+	if self.Left.color() == llrb.Black && self.Left.Left.color() == llrb.Black {
 		self = self.moveRedLeft()
 	}
 	self.Left, d = self.Left.deleteMin(fast)
@@ -381,17 +364,17 @@ func (self *Tree) DeleteMax(fast bool) {
 	if self.Root == nil {
 		return
 	}
-	self.Root.Color = Black
+	self.Root.Color = llrb.Black
 }
 
 func (self *Node) deleteMax(fast bool) (root *Node, d int) {
-	if self.Left != nil && self.Left.color() == Red {
+	if self.Left != nil && self.Left.color() == llrb.Red {
 		self = self.rotateRight()
 	}
 	if self.Right == nil {
 		return nil, -1
 	}
-	if self.Right.color() == Black && self.Right.Left.color() == Black {
+	if self.Right.color() == llrb.Black && self.Right.Left.color() == llrb.Black {
 		self = self.moveRedRight()
 	}
 	self.Right, d = self.Right.deleteMax(fast)
@@ -418,7 +401,7 @@ func (self *Tree) Delete(e Interface, fast bool) (err error) {
 	if self.Root == nil {
 		return
 	}
-	self.Root.Color = Black
+	self.Root.Color = llrb.Black
 	return
 }
 
@@ -426,7 +409,7 @@ func (self *Node) delete(e Interface, fast bool) (root *Node, d int) {
 	id := e.ID()
 	if p := e.Min().Compare(self.Elem.Min()); p < 0 || (p == 0 && id.Compare(self.Elem.ID()) < 0) {
 		if self.Left != nil && e.Overlap(self.Left.Range) {
-			if self.Left.color() == Black && self.Left.Left.color() == Black {
+			if self.Left.color() == llrb.Black && self.Left.Left.color() == llrb.Black {
 				self = self.moveRedLeft()
 			}
 			self.Left, d = self.Left.delete(e, fast)
@@ -435,14 +418,14 @@ func (self *Node) delete(e Interface, fast bool) (root *Node, d int) {
 			}
 		}
 	} else {
-		if self.Left.color() == Red {
+		if self.Left.color() == llrb.Red {
 			self = self.rotateRight()
 		}
 		if self.Right == nil && id.Compare(self.Elem.ID()) == 0 {
 			return nil, -1
 		}
 		if self.Right != nil {
-			if self.Right.color() == Black && self.Right.Left.color() == Black {
+			if self.Right.color() == llrb.Black && self.Right.Left.color() == llrb.Black {
 				self = self.moveRedRight()
 			}
 			if id.Compare(self.Elem.ID()) == 0 {

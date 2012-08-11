@@ -16,6 +16,7 @@
 package interval
 
 import (
+	"code.google.com/p/biogo.llrb"
 	"flag"
 	"fmt"
 	check "launchpad.net/gocheck"
@@ -69,25 +70,25 @@ func (n *Node) is23_234() bool {
 		// If the node has two children, only one of them may be red.
 		// The other must be black...
 		if (n.Left != nil) && (n.Right != nil) {
-			if n.Left.color() == Red && n.Right.color() == Red {
+			if n.Left.color() == llrb.Red && n.Right.color() == llrb.Red {
 				return false
 			}
 		}
 		// and the red node should really should be the left one.
-		if n.Right.color() == Red {
+		if n.Right.color() == llrb.Red {
 			return false
 		}
 	} else if Mode == TD234 {
 		// This test is altered from that shown in the java since the trees
 		// shown in the paper do not conform to the test as it existed and the
 		// current situation does not break the 2-3-4 definition of the LLRB.
-		if n.Right.color() == Red && n.Left.color() == Black {
+		if n.Right.color() == llrb.Red && n.Left.color() == llrb.Black {
 			return false
 		}
 	} else {
 		panic("cannot reach")
 	}
-	if n.color() == Red && n.Left.color() == Red {
+	if n.color() == llrb.Red && n.Left.color() == llrb.Red {
 		return false
 	}
 	return n.Left.is23_234() && n.Right.is23_234()
@@ -100,7 +101,7 @@ func (t *Tree) isBalanced() bool {
 	}
 	var black int // number of black links on path from root to min
 	for x := t.Root; x != nil; x = x.Left {
-		if x.color() == Black {
+		if x.color() == llrb.Black {
 			black++
 		}
 	}
@@ -115,7 +116,7 @@ func (n *Node) isBalanced(black int) bool {
 	} else if n == nil && black != 0 {
 		return false
 	}
-	if n.color() == Black {
+	if n.color() == llrb.Black {
 		black--
 	}
 	return n.Left.isBalanced(black) && n.Right.isBalanced(black)
@@ -729,7 +730,7 @@ func (s *S) TestDeleteMinMax(c *check.C) {
 
 var (
 	modeName = []string{TD234: "TD234", BU23: "BU23"}
-	arrows   = map[Color]string{Red: "none", Black: "normal"}
+	arrows   = map[llrb.Color]string{llrb.Red: "none", llrb.Black: "normal"}
 )
 
 func dot(t *Tree, label string) string {
