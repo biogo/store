@@ -20,6 +20,7 @@ import (
 	"fmt"
 )
 
+// Generic intervals
 type Int int
 
 func (c Int) Compare(b interval.Comparable) int {
@@ -58,30 +59,79 @@ func (m *Mutable) Max() interval.Comparable     { return m.End }
 func (m *Mutable) SetMin(c interval.Comparable) { m.Start = c.(Int) }
 func (m *Mutable) SetMax(c interval.Comparable) { m.End = c.(Int) }
 
+// Integer-specific intervals
+type IntInterval struct {
+	Start, End int
+	UID        uintptr
+	Payload    interface{}
+}
+
+func (i IntInterval) Overlap(b interval.IntRange) bool {
+	// Half-open interval indexing.
+	return i.End > b.Min && i.Start < b.Max
+}
+func (i IntInterval) ID() uintptr              { return i.UID }
+func (i IntInterval) Range() interval.IntRange { return interval.IntRange{i.Start, i.End} }
+func (i IntInterval) String() string           { return fmt.Sprintf("[%d,%d)#%d", i.Start, i.End, i.UID) }
+
 func Example() {
-	ivs := []Interval{
-		{Start: 0, End: 2},
-		{Start: 2, End: 4},
-		{Start: 1, End: 6},
-		{Start: 3, End: 4},
-		{Start: 1, End: 3},
-		{Start: 4, End: 6},
-		{Start: 5, End: 8},
-		{Start: 6, End: 8},
-		{Start: 5, End: 9},
-	}
-
-	t := &interval.Tree{}
-	for i, iv := range ivs {
-		iv.UID = Int(i)
-		err := t.Insert(iv, false)
-		if err != nil {
-			fmt.Println(err)
+	// Generic intervals
+	{
+		ivs := []Interval{
+			{Start: 0, End: 2},
+			{Start: 2, End: 4},
+			{Start: 1, End: 6},
+			{Start: 3, End: 4},
+			{Start: 1, End: 3},
+			{Start: 4, End: 6},
+			{Start: 5, End: 8},
+			{Start: 6, End: 8},
+			{Start: 5, End: 9},
 		}
+
+		t := &interval.Tree{}
+		for i, iv := range ivs {
+			iv.UID = Int(i)
+			err := t.Insert(iv, false)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+
+		fmt.Println("Generic interval tree:")
+		fmt.Println(t.Get(Interval{Start: 3, End: 6}))
 	}
 
-	fmt.Println(t.Get(Interval{Start: 3, End: 6}))
+	// Integer-specific intervals
+	{
+		ivs := []IntInterval{
+			{Start: 0, End: 2},
+			{Start: 2, End: 4},
+			{Start: 1, End: 6},
+			{Start: 3, End: 4},
+			{Start: 1, End: 3},
+			{Start: 4, End: 6},
+			{Start: 5, End: 8},
+			{Start: 6, End: 8},
+			{Start: 5, End: 9},
+		}
+
+		t := &interval.IntTree{}
+		for i, iv := range ivs {
+			iv.UID = uintptr(i)
+			err := t.Insert(iv, false)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+
+		fmt.Println("Integer-specific interval tree:")
+		fmt.Println(t.Get(IntInterval{Start: 3, End: 6}))
+	}
 
 	// Output:
+	// Generic interval tree:
+	// [[1,6)#2 [2,4)#1 [3,4)#3 [4,6)#5 [5,8)#6 [5,9)#8]
+	// Integer-specific interval tree:
 	// [[1,6)#2 [2,4)#1 [3,4)#3 [4,6)#5 [5,8)#6 [5,9)#8]
 }
