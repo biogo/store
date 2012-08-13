@@ -258,13 +258,13 @@ func (self *Tree) Insert(e Interface, fast bool) (err error) {
 		return ErrInvertedRange
 	}
 	var d int
-	self.Root, d = self.Root.insert(e, fast)
+	self.Root, d = self.Root.insert(e, e.Min(), e.ID(), fast)
 	self.Count += d
 	self.Root.Color = llrb.Black
 	return
 }
 
-func (self *Node) insert(e Interface, fast bool) (root *Node, d int) {
+func (self *Node) insert(e Interface, min, id Comparable, fast bool) (root *Node, d int) {
 	if self == nil {
 		return &Node{Elem: e, Range: e.NewMutable()}, 1
 	} else if self.Elem == nil {
@@ -281,23 +281,23 @@ func (self *Node) insert(e Interface, fast bool) (root *Node, d int) {
 		}
 	}
 
-	switch c := e.Min().Compare(self.Elem.Min()); {
+	switch c := min.Compare(self.Elem.Min()); {
 	case c == 0:
-		switch cid := e.ID().Compare(self.Elem.ID()); {
+		switch cid := id.Compare(self.Elem.ID()); {
 		case cid == 0:
 			self.Elem = e
 			if !fast {
 				self.Range.SetMax(e.Max())
 			}
 		case cid < 0:
-			self.Left, d = self.Left.insert(e, fast)
+			self.Left, d = self.Left.insert(e, min, id, fast)
 		default:
-			self.Right, d = self.Right.insert(e, fast)
+			self.Right, d = self.Right.insert(e, min, id, fast)
 		}
 	case c < 0:
-		self.Left, d = self.Left.insert(e, fast)
+		self.Left, d = self.Left.insert(e, min, id, fast)
 	default:
-		self.Right, d = self.Right.insert(e, fast)
+		self.Right, d = self.Right.insert(e, min, id, fast)
 	}
 
 	if self.Right.color() == llrb.Red && self.Left.color() == llrb.Black {
@@ -395,7 +395,7 @@ func (self *Tree) Delete(e Interface, fast bool) (err error) {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.delete(e, fast)
+	self.Root, d = self.Root.delete(e, e.Min(), e.ID(), fast)
 	self.Count += d
 	if self.Root == nil {
 		return
@@ -404,14 +404,13 @@ func (self *Tree) Delete(e Interface, fast bool) (err error) {
 	return
 }
 
-func (self *Node) delete(e Interface, fast bool) (root *Node, d int) {
-	id := e.ID()
-	if p := e.Min().Compare(self.Elem.Min()); p < 0 || (p == 0 && id.Compare(self.Elem.ID()) < 0) {
+func (self *Node) delete(e Interface, min, id Comparable, fast bool) (root *Node, d int) {
+	if p := min.Compare(self.Elem.Min()); p < 0 || (p == 0 && id.Compare(self.Elem.ID()) < 0) {
 		if self.Left != nil && e.Overlap(self.Left.Range) {
 			if self.Left.color() == llrb.Black && self.Left.Left.color() == llrb.Black {
 				self = self.moveRedLeft()
 			}
-			self.Left, d = self.Left.delete(e, fast)
+			self.Left, d = self.Left.delete(e, min, id, fast)
 			if self.Left == nil {
 				self.Range.SetMin(self.Elem.Min())
 			}
@@ -431,7 +430,7 @@ func (self *Node) delete(e Interface, fast bool) (root *Node, d int) {
 				self.Elem = self.Right.min().Elem
 				self.Right, d = self.Right.deleteMin(fast)
 			} else {
-				self.Right, d = self.Right.delete(e, fast)
+				self.Right, d = self.Right.delete(e, min, id, fast)
 			}
 			if self.Right == nil {
 				self.Range.SetMax(self.Elem.Max())
