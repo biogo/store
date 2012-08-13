@@ -355,7 +355,7 @@ func (self *IntTree) Delete(e IntInterface, fast bool) (err error) {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.delete(e, e.Range(), e.ID(), fast)
+	self.Root, d = self.Root.delete(e.Range().Min, e.ID(), fast)
 	self.Count += d
 	if self.Root == nil {
 		return
@@ -364,13 +364,13 @@ func (self *IntTree) Delete(e IntInterface, fast bool) (err error) {
 	return
 }
 
-func (self *IntNode) delete(e IntInterface, r IntRange, id uintptr, fast bool) (root *IntNode, d int) {
-	if p := r.Min - self.Interval.Min; p < 0 || (p == 0 && id < self.Elem.ID()) {
-		if self.Left != nil && e.Overlap(self.Left.Range) {
+func (self *IntNode) delete(m int, id uintptr, fast bool) (root *IntNode, d int) {
+	if p := m - self.Interval.Min; p < 0 || (p == 0 && id < self.Elem.ID()) {
+		if self.Left != nil {
 			if self.Left.color() == llrb.Black && self.Left.Left.color() == llrb.Black {
 				self = self.moveRedLeft()
 			}
-			self.Left, d = self.Left.delete(e, r, id, fast)
+			self.Left, d = self.Left.delete(m, id, fast)
 			if self.Left == nil {
 				self.Range.Min = self.Interval.Min
 			}
@@ -392,7 +392,7 @@ func (self *IntNode) delete(e IntInterface, r IntRange, id uintptr, fast bool) (
 				self.Interval = m.Interval
 				self.Right, d = self.Right.deleteMin(fast)
 			} else {
-				self.Right, d = self.Right.delete(e, r, id, fast)
+				self.Right, d = self.Right.delete(m, id, fast)
 			}
 			if self.Right == nil {
 				self.Range.Max = self.Interval.Max
