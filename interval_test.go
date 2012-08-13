@@ -518,14 +518,14 @@ func (s *S) TestFloor(c *check.C) {
 		}
 	}
 	for i := min; i <= max; i++ {
-		l, _ := t.Floor(i)
+		l, _ := t.Floor(&overlap{start: i, end: i + 1})
 		if i&1 == 0 {
 			c.Check(l, check.DeepEquals, &overlap{start: i, end: i + 1}) // Check even Floors are themselves.
 		} else {
 			c.Check(l, check.DeepEquals, &overlap{start: i - 1, end: i}) // Check odd Floors are the previous number.
 		}
 	}
-	l, _ := t.Floor(min - 1)
+	l, _ := t.Floor(&overlap{start: min - 1, end: min})
 	c.Check(l, check.DeepEquals, Interface(nil))
 }
 
@@ -538,14 +538,14 @@ func (s *S) TestCeil(c *check.C) {
 		}
 	}
 	for i := min; i < max; i++ {
-		u, _ := t.Ceil(i)
+		u, _ := t.Ceil(&overlap{start: i, end: i + 1})
 		if i&1 == 1 {
 			c.Check(u, check.DeepEquals, &overlap{start: i, end: i + 1}) // Check odd Ceils are themselves.
 		} else {
 			c.Check(u, check.DeepEquals, &overlap{start: i + 1, end: i + 2}) // Check even Ceils are the next number.
 		}
 	}
-	u, _ := t.Ceil(max + 1)
+	u, _ := t.Ceil(&overlap{start: max, end: max + 2})
 	c.Check(u, check.DeepEquals, Comparable(nil))
 }
 

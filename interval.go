@@ -471,58 +471,78 @@ func (self *Node) max() (n *Node) {
 	return
 }
 
-// Floor returns the greatest interval equal to or less than the query q according to q.Compare().
-func (self *Tree) Floor(q Comparable) (o Interface, err error) {
+// Floor returns the largest value equal to or less than the query q according to
+// q.Min().Compare(), with ties broken by q.ID().Compare().
+func (self *Tree) Floor(q Interface) (o Interface, err error) {
 	if self.Root == nil {
 		return
 	}
-	n := self.Root.floor(q)
+	n := self.Root.floor(q.Min(), q.ID())
 	if n == nil {
 		return
 	}
 	return n.Elem, nil
 }
 
-func (self *Node) floor(m Comparable) *Node {
+func (self *Node) floor(m, id Comparable) *Node {
 	if self == nil {
 		return nil
 	}
 	switch c := m.Compare(self.Elem.Min()); {
 	case c == 0:
-		return self
+		switch cid := id.Compare(self.Elem.ID()); {
+		case cid == 0:
+			return self
+		case cid < 0:
+			return self.Left.floor(m, id)
+		default:
+			if r := self.Right.floor(m, id); r != nil {
+				return r
+			}
+		}
 	case c < 0:
-		return self.Left.floor(m)
+		return self.Left.floor(m, id)
 	default:
-		if r := self.Right.floor(m); r != nil {
+		if r := self.Right.floor(m, id); r != nil {
 			return r
 		}
 	}
 	return self
 }
 
-// Ceil returns the smallest value equal to or greater than the query q according to q.Compare().
-func (self *Tree) Ceil(q Comparable) (o Interface, err error) {
+// Ceil returns the smallest value equal to or greater than the query q according to
+// q.Min().Compare(), with ties broken by q.ID().Compare().
+func (self *Tree) Ceil(q Interface) (o Interface, err error) {
 	if self.Root == nil {
 		return
 	}
-	n := self.Root.ceil(q)
+	n := self.Root.ceil(q.Min(), q.ID())
 	if n == nil {
 		return
 	}
 	return n.Elem, nil
 }
 
-func (self *Node) ceil(m Comparable) *Node {
+func (self *Node) ceil(m, id Comparable) *Node {
 	if self == nil {
 		return nil
 	}
 	switch c := m.Compare(self.Elem.Min()); {
 	case c == 0:
-		return self
+		switch cid := id.Compare(self.Elem.ID()); {
+		case cid == 0:
+			return self
+		case cid > 0:
+			return self.Right.ceil(m, id)
+		default:
+			if l := self.Left.ceil(m, id); l != nil {
+				return l
+			}
+		}
 	case c > 0:
-		return self.Right.ceil(m)
+		return self.Right.ceil(m, id)
 	default:
-		if l := self.Left.ceil(m); l != nil {
+		if l := self.Left.ceil(m, id); l != nil {
 			return l
 		}
 	}
