@@ -42,7 +42,7 @@ func (n *IntNode) isBST(min, max IntInterface) bool {
 	if n == nil {
 		return true
 	}
-	if n.Elem.Range().Min < min.Range().Min || n.Elem.Range().Min > max.Range().Min {
+	if n.Elem.Range().Start < min.Range().Start || n.Elem.Range().Start > max.Range().Start {
 		return false
 	}
 	return n.Left.isBST(min, n.Elem) || n.Right.isBST(n.Elem, max)
@@ -128,13 +128,13 @@ func (n *IntNode) isRanged() bool {
 	}
 	e, r := n.Elem, n.Range
 	m := n.bounding(e.Range())
-	return m.Min == r.Min && m.Max == r.Max &&
+	return m.Start == r.Start && m.End == r.End &&
 		n.Left.isRanged() &&
 		n.Right.isRanged()
 }
 func (n *IntNode) bounding(m IntRange) IntRange {
-	m.Min = intMin(n.Elem.Range().Min, m.Min)
-	m.Max = intMax(n.Elem.Range().Max, m.Max)
+	m.Start = intMin(n.Elem.Range().Start, m.Start)
+	m.End = intMax(n.Elem.Range().End, m.End)
 	if n.Left != nil {
 		m = n.Left.bounding(m)
 	}
@@ -152,7 +152,7 @@ type intOverlap struct {
 }
 
 func (o *intOverlap) Overlap(r IntRange) bool {
-	return o.end > r.Min && o.start < r.Max
+	return o.end > r.Start && o.start < r.End
 }
 func (o *intOverlap) ID() uintptr     { return o.id }
 func (o *intOverlap) Range() IntRange { return IntRange{o.start, o.end} }
@@ -263,8 +263,8 @@ func (s *S) TestIntInsertion(c *check.C) {
 			c.Fatal("Cannot continue test: invariant contradiction")
 		}
 	}
-	c.Check(t.Min().Range().Min, check.Equals, min)
-	c.Check(t.Max().Range().Min, check.Equals, max)
+	c.Check(t.Min().Range().Start, check.Equals, min)
+	c.Check(t.Max().Range().Start, check.Equals, max)
 }
 
 func (s *S) TestIntFastInsertion(c *check.C) {
@@ -282,8 +282,8 @@ func (s *S) TestIntFastInsertion(c *check.C) {
 	}
 	t.AdjustRanges()
 	c.Check(t.isRanged(), check.Equals, true)
-	c.Check(t.Min().Range().Min, check.Equals, min)
-	c.Check(t.Max().Range().Min, check.Equals, max)
+	c.Check(t.Min().Range().Start, check.Equals, min)
+	c.Check(t.Max().Range().Start, check.Equals, max)
 }
 
 func (s *S) TestIntDeletion(c *check.C) {

@@ -49,7 +49,7 @@ func (n *Node) isBST(min, max Interface) bool {
 	if n == nil {
 		return true
 	}
-	if n.Elem.Min().Compare(min.Min()) < 0 || n.Elem.Min().Compare(max.Min()) > 0 {
+	if n.Elem.Start().Compare(min.Start()) < 0 || n.Elem.Start().Compare(max.Start()) > 0 {
 		return false
 	}
 	return n.Left.isBST(min, n.Elem) || n.Right.isBST(n.Elem, max)
@@ -134,14 +134,14 @@ func (n *Node) isRanged() bool {
 		return true
 	}
 	e, r := n.Elem, n.Range
-	m := n.bounding(&overlap{start: e.Min().(compInt), end: e.Max().(compInt)})
-	return m.Min().Compare(r.Min()) == 0 && m.Max().Compare(r.Max()) == 0 &&
+	m := n.bounding(&overlap{start: e.Start().(compInt), end: e.End().(compInt)})
+	return m.Start().Compare(r.Start()) == 0 && m.End().Compare(r.End()) == 0 &&
 		n.Left.isRanged() &&
 		n.Right.isRanged()
 }
 func (n *Node) bounding(m Mutable) Mutable {
-	m.SetMin(min(n.Elem.Min(), m.Min()))
-	m.SetMax(max(n.Elem.Max(), m.Max()))
+	m.SetStart(min(n.Elem.Start(), m.Start()))
+	m.SetEnd(max(n.Elem.End(), m.End()))
 	if n.Left != nil {
 		m = n.Left.bounding(m)
 	}
@@ -161,12 +161,12 @@ func (or overRune) Compare(b Comparable) int {
 func (or overRune) Overlap(b Range) bool {
 	return or == b.(overRune)
 }
-func (or overRune) ID() Comparable      { return or } // Not semantically satisfying interface, but not used.
-func (or overRune) Min() Comparable     { return or }
-func (or overRune) Max() Comparable     { return or }
-func (or overRune) SetMin(_ Comparable) {}
-func (or overRune) SetMax(_ Comparable) {}
-func (or overRune) NewMutable() Mutable { return or }
+func (or overRune) ID() Comparable        { return or } // Not semantically satisfying interface, but not used.
+func (or overRune) Start() Comparable     { return or }
+func (or overRune) End() Comparable       { return or }
+func (or overRune) SetStart(_ Comparable) {}
+func (or overRune) SetEnd(_ Comparable)   {}
+func (or overRune) NewMutable() Mutable   { return or }
 
 type compInt int
 
@@ -180,13 +180,13 @@ func (o *overlap) Overlap(b Range) bool {
 	bc := b.(*overlap)
 	return o.end > bc.start && o.start < bc.end
 }
-func (o *overlap) ID() Comparable      { return o.id }
-func (o *overlap) Min() Comparable     { return o.start }
-func (o *overlap) Max() Comparable     { return o.end }
-func (o *overlap) SetMin(c Comparable) { o.start = c.(compInt) }
-func (o *overlap) SetMax(c Comparable) { o.end = c.(compInt) }
-func (o *overlap) NewMutable() Mutable { return &overlap{o.start, o.end, o.id} }
-func (o *overlap) String() string      { return fmt.Sprintf("[%d,%d)", o.start, o.end) }
+func (o *overlap) ID() Comparable        { return o.id }
+func (o *overlap) Start() Comparable     { return o.start }
+func (o *overlap) End() Comparable       { return o.end }
+func (o *overlap) SetStart(c Comparable) { o.start = c.(compInt) }
+func (o *overlap) SetEnd(c Comparable)   { o.end = c.(compInt) }
+func (o *overlap) NewMutable() Mutable   { return &overlap{o.start, o.end, o.id} }
+func (o *overlap) String() string        { return fmt.Sprintf("[%d,%d)", o.start, o.end) }
 
 // Build a tree from a simplified Newick format returning the root node.
 // Single letter node names only, no error checking and all nodes are full or leaf.
@@ -394,8 +394,8 @@ func (s *S) TestInsertion(c *check.C) {
 			c.Fatal("Cannot continue test: invariant contradiction")
 		}
 	}
-	c.Check(t.Min().Min(), check.DeepEquals, min)
-	c.Check(t.Max().Min(), check.DeepEquals, max)
+	c.Check(t.Min().Start(), check.DeepEquals, min)
+	c.Check(t.Max().Start(), check.DeepEquals, max)
 }
 
 func (s *S) TestFastInsertion(c *check.C) {
@@ -413,8 +413,8 @@ func (s *S) TestFastInsertion(c *check.C) {
 	}
 	t.AdjustRanges()
 	c.Check(t.isRanged(), check.Equals, true)
-	c.Check(t.Min().Min(), check.DeepEquals, min)
-	c.Check(t.Max().Min(), check.DeepEquals, max)
+	c.Check(t.Min().Start(), check.DeepEquals, min)
+	c.Check(t.Max().Start(), check.DeepEquals, max)
 }
 
 func (s *S) TestDeletion(c *check.C) {

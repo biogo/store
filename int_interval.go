@@ -28,7 +28,7 @@ type IntOverlapper interface {
 // An IntRange is a type that describes the basic characteristics of an interval over the
 // integer number line.
 type IntRange struct {
-	Min, Max int
+	Start, End int
 }
 
 // An IntInterface is a type that can be inserted into a IntTree.
@@ -69,11 +69,11 @@ func (self *IntNode) rotateLeft() (root *IntNode) {
 	// Assumes: self has two children.
 	root = self.Right
 	if root.Left != nil {
-		self.Range.Max = intMax(self.Interval.Max, root.Left.Range.Max)
+		self.Range.End = intMax(self.Interval.End, root.Left.Range.End)
 	} else {
-		self.Range.Max = self.Interval.Max
+		self.Range.End = self.Interval.End
 	}
-	root.Range.Min = intMin(root.Interval.Min, self.Range.Min)
+	root.Range.Start = intMin(root.Interval.Start, self.Range.Start)
 	self.Right = root.Left
 	root.Left = self
 	root.Color = self.Color
@@ -86,11 +86,11 @@ func (self *IntNode) rotateRight() (root *IntNode) {
 	// Assumes: self has two children.
 	root = self.Left
 	if root.Right != nil {
-		self.Range.Min = intMin(self.Interval.Min, root.Right.Range.Min)
+		self.Range.Start = intMin(self.Interval.Start, root.Right.Range.Start)
 	} else {
-		self.Range.Min = self.Interval.Min
+		self.Range.Start = self.Interval.Start
 	}
-	root.Range.Max = intMax(root.Interval.Max, self.Range.Max)
+	root.Range.End = intMax(root.Interval.End, self.Range.End)
 	self.Left = root.Right
 	root.Right = self
 	root.Color = self.Color
@@ -132,11 +132,11 @@ func (self *IntNode) fixUp(fast bool) *IntNode {
 // spans and the node's Elem span.
 func (self *IntNode) adjustRange() {
 	if self.Left != nil {
-		self.Range.Min = intMin(self.Interval.Min, self.Left.Range.Min)
-		self.Range.Max = intMax(self.Interval.Max, self.Left.Range.Max)
+		self.Range.Start = intMin(self.Interval.Start, self.Left.Range.Start)
+		self.Range.End = intMax(self.Interval.End, self.Left.Range.End)
 	}
 	if self.Right != nil {
-		self.Range.Max = intMax(self.Interval.Max, self.Right.Range.Max)
+		self.Range.End = intMax(self.Interval.End, self.Right.Range.End)
 	}
 }
 
@@ -212,7 +212,7 @@ func (self *IntNode) adjustRanges() {
 // Insert inserts the IntInterface e into the IntTree. Insertions may replace
 // existing stored intervals.
 func (self *IntTree) Insert(e IntInterface, fast bool) (err error) {
-	if r := e.Range(); r.Min > r.Max {
+	if r := e.Range(); r.Start > r.End {
 		return ErrInvertedRange
 	}
 	var d int
@@ -240,14 +240,14 @@ func (self *IntNode) insert(e IntInterface, r IntRange, id uintptr, fast bool) (
 		}
 	}
 
-	switch c := r.Min - self.Interval.Min; {
+	switch c := r.Start - self.Interval.Start; {
 	case c == 0:
 		switch cid := id - self.Elem.ID(); {
 		case cid == 0:
 			self.Elem = e
 			self.Interval = r
 			if !fast {
-				self.Range.Max = r.Max
+				self.Range.End = r.End
 			}
 		case cid < 0:
 			self.Left, d = self.Left.insert(e, r, id, fast)
@@ -304,7 +304,7 @@ func (self *IntNode) deleteMin(fast bool) (root *IntNode, d int) {
 	}
 	self.Left, d = self.Left.deleteMin(fast)
 	if self.Left == nil {
-		self.Range.Min = self.Elem.Range().Min
+		self.Range.Start = self.Elem.Range().Start
 	}
 
 	root = self.fixUp(fast)
@@ -338,7 +338,7 @@ func (self *IntNode) deleteMax(fast bool) (root *IntNode, d int) {
 	}
 	self.Right, d = self.Right.deleteMax(fast)
 	if self.Right == nil {
-		self.Range.Max = self.Elem.Range().Max
+		self.Range.End = self.Elem.Range().End
 	}
 
 	root = self.fixUp(fast)
@@ -348,14 +348,14 @@ func (self *IntNode) deleteMax(fast bool) (root *IntNode, d int) {
 
 // Delete deletes the element e if it exists in the IntTree.
 func (self *IntTree) Delete(e IntInterface, fast bool) (err error) {
-	if r := e.Range(); r.Min > r.Max {
+	if r := e.Range(); r.Start > r.End {
 		return ErrInvertedRange
 	}
 	if self.Root == nil || !e.Overlap(self.Root.Range) {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.delete(e.Range().Min, e.ID(), fast)
+	self.Root, d = self.Root.delete(e.Range().Start, e.ID(), fast)
 	self.Count += d
 	if self.Root == nil {
 		return
@@ -365,14 +365,14 @@ func (self *IntTree) Delete(e IntInterface, fast bool) (err error) {
 }
 
 func (self *IntNode) delete(m int, id uintptr, fast bool) (root *IntNode, d int) {
-	if p := m - self.Interval.Min; p < 0 || (p == 0 && id < self.Elem.ID()) {
+	if p := m - self.Interval.Start; p < 0 || (p == 0 && id < self.Elem.ID()) {
 		if self.Left != nil {
 			if self.Left.color() == llrb.Black && self.Left.Left.color() == llrb.Black {
 				self = self.moveRedLeft()
 			}
 			self.Left, d = self.Left.delete(m, id, fast)
 			if self.Left == nil {
-				self.Range.Min = self.Interval.Min
+				self.Range.Start = self.Interval.Start
 			}
 		}
 	} else {
@@ -395,7 +395,7 @@ func (self *IntNode) delete(m int, id uintptr, fast bool) (root *IntNode, d int)
 				self.Right, d = self.Right.delete(m, id, fast)
 			}
 			if self.Right == nil {
-				self.Range.Max = self.Interval.Max
+				self.Range.End = self.Interval.End
 			}
 		}
 	}
@@ -434,12 +434,12 @@ func (self *IntNode) max() (n *IntNode) {
 }
 
 // Floor returns the largest value equal to or less than the query q according to
-// q.Min().Compare(), with ties broken by q.ID().Compare().
+// q.Start().Compare(), with ties broken by q.ID().Compare().
 func (self *IntTree) Floor(q IntInterface) (o IntInterface, err error) {
 	if self.Root == nil {
 		return
 	}
-	n := self.Root.floor(q.Range().Min, q.ID())
+	n := self.Root.floor(q.Range().Start, q.ID())
 	if n == nil {
 		return
 	}
@@ -450,7 +450,7 @@ func (self *IntNode) floor(m int, id uintptr) *IntNode {
 	if self == nil {
 		return nil
 	}
-	switch c := m - self.Interval.Min; {
+	switch c := m - self.Interval.Start; {
 	case c == 0:
 		switch cid := id - self.Elem.ID(); {
 		case cid == 0:
@@ -473,12 +473,12 @@ func (self *IntNode) floor(m int, id uintptr) *IntNode {
 }
 
 // Ceil returns the smallest value equal to or greater than the query q according to
-// q.Min().Compare(), with ties broken by q.ID().Compare().
+// q.Start().Compare(), with ties broken by q.ID().Compare().
 func (self *IntTree) Ceil(q IntInterface) (o IntInterface, err error) {
 	if self.Root == nil {
 		return
 	}
-	n := self.Root.ceil(q.Range().Min, q.ID())
+	n := self.Root.ceil(q.Range().Start, q.ID())
 	if n == nil {
 		return
 	}
@@ -489,7 +489,7 @@ func (self *IntNode) ceil(m int, id uintptr) *IntNode {
 	if self == nil {
 		return nil
 	}
-	switch c := m - self.Interval.Min; {
+	switch c := m - self.Interval.Start; {
 	case c == 0:
 		switch cid := id - self.Elem.ID(); {
 		case cid == 0:

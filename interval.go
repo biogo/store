@@ -36,8 +36,8 @@ func init() {
 	}
 }
 
-// ErrInvertedRange is returned if an interval is used where the minimum value is greater
-// than the maximum value.
+// ErrInvertedRange is returned if an interval is used where the start value is greater
+// than the end value.
 var ErrInvertedRange = errors.New("interval: inverted range")
 
 // An Overlapper can determine whether it overlaps a range.
@@ -48,10 +48,10 @@ type Overlapper interface {
 
 // A Range is a type that describes the basic characteristics of an interval.
 type Range interface {
-	// Return a Comparable equal to the Minimum value of the Overlapper.
-	Min() Comparable
-	// Return a Comparable equal to the Maximum value of the Overlapper.
-	Max() Comparable
+	// Return a Comparable equal to the start value of the Overlapper.
+	Start() Comparable
+	// Return a Comparable equal to the end value of the Overlapper.
+	End() Comparable
 }
 
 // An Interface is a type that can be inserted into a Tree.
@@ -65,8 +65,8 @@ type Interface interface {
 // A Mutable is a Range that can have its range altered.
 type Mutable interface {
 	Range
-	SetMin(Comparable) // Set the minimum value.
-	SetMax(Comparable) // Set the maximum value.
+	SetStart(Comparable) // Set the start value.
+	SetEnd(Comparable)   // Set the end value.
 }
 
 // A Comparable is a type that describes the ends of an Overlapper.
@@ -111,11 +111,11 @@ func (self *Node) rotateLeft() (root *Node) {
 	// Assumes: self has two children.
 	root = self.Right
 	if root.Left != nil {
-		self.Range.SetMax(max(self.Elem.Max(), root.Left.Range.Max()))
+		self.Range.SetEnd(max(self.Elem.End(), root.Left.Range.End()))
 	} else {
-		self.Range.SetMax(self.Elem.Max())
+		self.Range.SetEnd(self.Elem.End())
 	}
-	root.Range.SetMin(min(root.Elem.Min(), self.Range.Min()))
+	root.Range.SetStart(min(root.Elem.Start(), self.Range.Start()))
 	self.Right = root.Left
 	root.Left = self
 	root.Color = self.Color
@@ -128,11 +128,11 @@ func (self *Node) rotateRight() (root *Node) {
 	// Assumes: self has two children.
 	root = self.Left
 	if root.Right != nil {
-		self.Range.SetMin(min(self.Elem.Min(), root.Right.Range.Min()))
+		self.Range.SetStart(min(self.Elem.Start(), root.Right.Range.Start()))
 	} else {
-		self.Range.SetMin(self.Elem.Min())
+		self.Range.SetStart(self.Elem.Start())
 	}
-	root.Range.SetMax(max(root.Elem.Max(), self.Range.Max()))
+	root.Range.SetEnd(max(root.Elem.End(), self.Range.End()))
 	self.Left = root.Right
 	root.Right = self
 	root.Color = self.Color
@@ -174,11 +174,11 @@ func (self *Node) fixUp(fast bool) *Node {
 // spans and the node's Elem span.
 func (self *Node) adjustRange() {
 	if self.Left != nil {
-		self.Range.SetMin(min(self.Elem.Min(), self.Left.Range.Min()))
-		self.Range.SetMax(max(self.Elem.Max(), self.Left.Range.Max()))
+		self.Range.SetStart(min(self.Elem.Start(), self.Left.Range.Start()))
+		self.Range.SetEnd(max(self.Elem.End(), self.Left.Range.End()))
 	}
 	if self.Right != nil {
-		self.Range.SetMax(max(self.Elem.Max(), self.Right.Range.Max()))
+		self.Range.SetEnd(max(self.Elem.End(), self.Right.Range.End()))
 	}
 }
 
@@ -254,11 +254,11 @@ func (self *Node) adjustRanges() {
 // Insert inserts the Interface e into the Tree. Insertions may replace
 // existing stored intervals.
 func (self *Tree) Insert(e Interface, fast bool) (err error) {
-	if e.Min().Compare(e.Max()) > 0 {
+	if e.Start().Compare(e.End()) > 0 {
 		return ErrInvertedRange
 	}
 	var d int
-	self.Root, d = self.Root.insert(e, e.Min(), e.ID(), fast)
+	self.Root, d = self.Root.insert(e, e.Start(), e.ID(), fast)
 	self.Count += d
 	self.Root.Color = llrb.Black
 	return
@@ -281,13 +281,13 @@ func (self *Node) insert(e Interface, min, id Comparable, fast bool) (root *Node
 		}
 	}
 
-	switch c := min.Compare(self.Elem.Min()); {
+	switch c := min.Compare(self.Elem.Start()); {
 	case c == 0:
 		switch cid := id.Compare(self.Elem.ID()); {
 		case cid == 0:
 			self.Elem = e
 			if !fast {
-				self.Range.SetMax(e.Max())
+				self.Range.SetEnd(e.End())
 			}
 		case cid < 0:
 			self.Left, d = self.Left.insert(e, min, id, fast)
@@ -344,7 +344,7 @@ func (self *Node) deleteMin(fast bool) (root *Node, d int) {
 	}
 	self.Left, d = self.Left.deleteMin(fast)
 	if self.Left == nil {
-		self.Range.SetMin(self.Elem.Min())
+		self.Range.SetStart(self.Elem.Start())
 	}
 
 	root = self.fixUp(fast)
@@ -378,7 +378,7 @@ func (self *Node) deleteMax(fast bool) (root *Node, d int) {
 	}
 	self.Right, d = self.Right.deleteMax(fast)
 	if self.Right == nil {
-		self.Range.SetMax(self.Elem.Max())
+		self.Range.SetEnd(self.Elem.End())
 	}
 
 	root = self.fixUp(fast)
@@ -388,14 +388,14 @@ func (self *Node) deleteMax(fast bool) (root *Node, d int) {
 
 // Delete deletes the element e if it exists in the Tree.
 func (self *Tree) Delete(e Interface, fast bool) (err error) {
-	if e.Min().Compare(e.Max()) > 0 {
+	if e.Start().Compare(e.End()) > 0 {
 		return ErrInvertedRange
 	}
 	if self.Root == nil || !e.Overlap(self.Root.Range) {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.delete(e.Min(), e.ID(), fast)
+	self.Root, d = self.Root.delete(e.Start(), e.ID(), fast)
 	self.Count += d
 	if self.Root == nil {
 		return
@@ -405,14 +405,14 @@ func (self *Tree) Delete(e Interface, fast bool) (err error) {
 }
 
 func (self *Node) delete(min, id Comparable, fast bool) (root *Node, d int) {
-	if p := min.Compare(self.Elem.Min()); p < 0 || (p == 0 && id.Compare(self.Elem.ID()) < 0) {
+	if p := min.Compare(self.Elem.Start()); p < 0 || (p == 0 && id.Compare(self.Elem.ID()) < 0) {
 		if self.Left != nil {
 			if self.Left.color() == llrb.Black && self.Left.Left.color() == llrb.Black {
 				self = self.moveRedLeft()
 			}
 			self.Left, d = self.Left.delete(min, id, fast)
 			if self.Left == nil {
-				self.Range.SetMin(self.Elem.Min())
+				self.Range.SetStart(self.Elem.Start())
 			}
 		}
 	} else {
@@ -433,7 +433,7 @@ func (self *Node) delete(min, id Comparable, fast bool) (root *Node, d int) {
 				self.Right, d = self.Right.delete(min, id, fast)
 			}
 			if self.Right == nil {
-				self.Range.SetMax(self.Elem.Max())
+				self.Range.SetEnd(self.Elem.End())
 			}
 		}
 	}
@@ -472,12 +472,12 @@ func (self *Node) max() (n *Node) {
 }
 
 // Floor returns the largest value equal to or less than the query q according to
-// q.Min().Compare(), with ties broken by q.ID().Compare().
+// q.Start().Compare(), with ties broken by q.ID().Compare().
 func (self *Tree) Floor(q Interface) (o Interface, err error) {
 	if self.Root == nil {
 		return
 	}
-	n := self.Root.floor(q.Min(), q.ID())
+	n := self.Root.floor(q.Start(), q.ID())
 	if n == nil {
 		return
 	}
@@ -488,7 +488,7 @@ func (self *Node) floor(m, id Comparable) *Node {
 	if self == nil {
 		return nil
 	}
-	switch c := m.Compare(self.Elem.Min()); {
+	switch c := m.Compare(self.Elem.Start()); {
 	case c == 0:
 		switch cid := id.Compare(self.Elem.ID()); {
 		case cid == 0:
@@ -511,12 +511,12 @@ func (self *Node) floor(m, id Comparable) *Node {
 }
 
 // Ceil returns the smallest value equal to or greater than the query q according to
-// q.Min().Compare(), with ties broken by q.ID().Compare().
+// q.Start().Compare(), with ties broken by q.ID().Compare().
 func (self *Tree) Ceil(q Interface) (o Interface, err error) {
 	if self.Root == nil {
 		return
 	}
-	n := self.Root.ceil(q.Min(), q.ID())
+	n := self.Root.ceil(q.Start(), q.ID())
 	if n == nil {
 		return
 	}
@@ -527,7 +527,7 @@ func (self *Node) ceil(m, id Comparable) *Node {
 	if self == nil {
 		return nil
 	}
-	switch c := m.Compare(self.Elem.Min()); {
+	switch c := m.Compare(self.Elem.Start()); {
 	case c == 0:
 		switch cid := id.Compare(self.Elem.ID()); {
 		case cid == 0:

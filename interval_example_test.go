@@ -28,36 +28,36 @@ func (c Int) Compare(b interval.Comparable) int {
 }
 
 type Interval struct {
-	Start, End, UID Int
-	Payload         interface{}
+	start, end, id Int
+	Payload        interface{}
 }
 
 func (i Interval) Overlap(b interval.Range) bool {
 	var start, end Int
 	switch bc := b.(type) {
 	case Interval:
-		start, end = bc.Start, bc.End
+		start, end = bc.start, bc.end
 	case *Mutable:
-		start, end = bc.Start, bc.End
+		start, end = bc.start, bc.end
 	default:
 		panic("unknown type")
 	}
 
 	// Half-open interval indexing.
-	return i.End > start && i.Start < end
+	return i.end > start && i.start < end
 }
-func (i Interval) ID() interval.Comparable      { return i.UID }
-func (i Interval) Min() interval.Comparable     { return i.Start }
-func (i Interval) Max() interval.Comparable     { return i.End }
-func (i Interval) NewMutable() interval.Mutable { return &Mutable{i.Start, i.End} }
-func (i Interval) String() string               { return fmt.Sprintf("[%d,%d)#%d", i.Start, i.End, i.UID) }
+func (i Interval) ID() interval.Comparable      { return i.id }
+func (i Interval) Start() interval.Comparable   { return i.start }
+func (i Interval) End() interval.Comparable     { return i.end }
+func (i Interval) NewMutable() interval.Mutable { return &Mutable{i.start, i.end} }
+func (i Interval) String() string               { return fmt.Sprintf("[%d,%d)#%d", i.start, i.end, i.id) }
 
-type Mutable struct{ Start, End Int }
+type Mutable struct{ start, end Int }
 
-func (m *Mutable) Min() interval.Comparable     { return m.Start }
-func (m *Mutable) Max() interval.Comparable     { return m.End }
-func (m *Mutable) SetMin(c interval.Comparable) { m.Start = c.(Int) }
-func (m *Mutable) SetMax(c interval.Comparable) { m.End = c.(Int) }
+func (m *Mutable) Start() interval.Comparable     { return m.start }
+func (m *Mutable) End() interval.Comparable       { return m.end }
+func (m *Mutable) SetStart(c interval.Comparable) { m.start = c.(Int) }
+func (m *Mutable) SetEnd(c interval.Comparable)   { m.end = c.(Int) }
 
 // Integer-specific intervals
 type IntInterval struct {
@@ -68,7 +68,7 @@ type IntInterval struct {
 
 func (i IntInterval) Overlap(b interval.IntRange) bool {
 	// Half-open interval indexing.
-	return i.End > b.Min && i.Start < b.Max
+	return i.End > b.Start && i.Start < b.End
 }
 func (i IntInterval) ID() uintptr              { return i.UID }
 func (i IntInterval) Range() interval.IntRange { return interval.IntRange{i.Start, i.End} }
@@ -78,20 +78,20 @@ func Example() {
 	// Generic intervals
 	{
 		ivs := []Interval{
-			{Start: 0, End: 2},
-			{Start: 2, End: 4},
-			{Start: 1, End: 6},
-			{Start: 3, End: 4},
-			{Start: 1, End: 3},
-			{Start: 4, End: 6},
-			{Start: 5, End: 8},
-			{Start: 6, End: 8},
-			{Start: 5, End: 9},
+			{start: 0, end: 2},
+			{start: 2, end: 4},
+			{start: 1, end: 6},
+			{start: 3, end: 4},
+			{start: 1, end: 3},
+			{start: 4, end: 6},
+			{start: 5, end: 8},
+			{start: 6, end: 8},
+			{start: 5, end: 9},
 		}
 
 		t := &interval.Tree{}
 		for i, iv := range ivs {
-			iv.UID = Int(i)
+			iv.id = Int(i)
 			err := t.Insert(iv, false)
 			if err != nil {
 				fmt.Println(err)
@@ -99,7 +99,7 @@ func Example() {
 		}
 
 		fmt.Println("Generic interval tree:")
-		fmt.Println(t.Get(Interval{Start: 3, End: 6}))
+		fmt.Println(t.Get(Interval{start: 3, end: 6}))
 	}
 
 	// Integer-specific intervals
