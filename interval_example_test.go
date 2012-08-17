@@ -28,9 +28,10 @@ func (c Int) Compare(b interval.Comparable) int {
 }
 
 type Interval struct {
-	start, end, id Int
-	Sub            []Interval
-	Payload        interface{}
+	start, end Int
+	id         uintptr
+	Sub        []Interval
+	Payload    interface{}
 }
 
 func (i Interval) Overlap(b interval.Range) bool {
@@ -47,7 +48,7 @@ func (i Interval) Overlap(b interval.Range) bool {
 	// Half-open interval indexing.
 	return i.end > start && i.start < end
 }
-func (i Interval) ID() interval.Comparable      { return i.id }
+func (i Interval) ID() uintptr                  { return i.id }
 func (i Interval) Start() interval.Comparable   { return i.start }
 func (i Interval) End() interval.Comparable     { return i.end }
 func (i Interval) NewMutable() interval.Mutable { return &Mutable{i.start, i.end} }
@@ -76,7 +77,7 @@ var ivs = []Interval{
 func Example_1() {
 	t := &interval.Tree{}
 	for i, iv := range ivs {
-		iv.id = Int(i)
+		iv.id = uintptr(i)
 		err := t.Insert(iv, false)
 		if err != nil {
 			fmt.Println(err)

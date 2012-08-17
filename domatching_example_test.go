@@ -63,7 +63,7 @@ func ExampleTree_DoMatching() {
 	)
 
 	for i, iv = range ivs {
-		iv.id = Int(i)
+		iv.id = uintptr(i)
 		err := t.Insert(iv, false)
 		if err != nil {
 			fmt.Println(err)
@@ -71,7 +71,7 @@ func ExampleTree_DoMatching() {
 	}
 	i++
 
-	Merge(t, Interval{start: -1, end: 4, id: Int(i)})
+	Merge(t, Interval{start: -1, end: 4, id: uintptr(i)})
 	t.Do(func(e interval.Interface) (done bool) {
 		fmt.Printf("%s: %v\n", e, e.(Interval).Sub)
 		return

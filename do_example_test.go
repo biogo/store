@@ -39,7 +39,7 @@ func Flatten(t *interval.Tree) {
 	var (
 		fi  = true
 		ti  []Interval
-		mid Int
+		mid uintptr
 	)
 
 	t.Do(
@@ -66,7 +66,7 @@ func Flatten(t *interval.Tree) {
 	mid++
 	t.Root, t.Count = nil, 0
 	for i, iv := range ti {
-		iv.id = Int(i) + mid
+		iv.id = uintptr(i) + mid
 		t.Insert(iv, true)
 	}
 	t.AdjustRanges()
@@ -75,7 +75,7 @@ func Flatten(t *interval.Tree) {
 func ExampleTree_Do() {
 	t := &interval.Tree{}
 	for i, iv := range ivs {
-		iv.id = Int(i)
+		iv.id = uintptr(i)
 		err := t.Insert(iv, false)
 		if err != nil {
 			fmt.Println(err)

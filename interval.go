@@ -58,7 +58,7 @@ type Range interface {
 type Interface interface {
 	Overlapper
 	Range
-	ID() Comparable      // Returns a unique ID for the element.
+	ID() uintptr         // Returns a unique ID for the element.
 	NewMutable() Mutable // Returns an mutable copy of the Interface's range.
 }
 
@@ -264,7 +264,7 @@ func (self *Tree) Insert(e Interface, fast bool) (err error) {
 	return
 }
 
-func (self *Node) insert(e Interface, min, id Comparable, fast bool) (root *Node, d int) {
+func (self *Node) insert(e Interface, min Comparable, id uintptr, fast bool) (root *Node, d int) {
 	if self == nil {
 		return &Node{Elem: e, Range: e.NewMutable()}, 1
 	} else if self.Elem == nil {
@@ -283,7 +283,7 @@ func (self *Node) insert(e Interface, min, id Comparable, fast bool) (root *Node
 
 	switch c := min.Compare(self.Elem.Start()); {
 	case c == 0:
-		switch cid := id.Compare(self.Elem.ID()); {
+		switch cid := id - self.Elem.ID(); {
 		case cid == 0:
 			self.Elem = e
 			if !fast {
@@ -404,8 +404,8 @@ func (self *Tree) Delete(e Interface, fast bool) (err error) {
 	return
 }
 
-func (self *Node) delete(min, id Comparable, fast bool) (root *Node, d int) {
-	if p := min.Compare(self.Elem.Start()); p < 0 || (p == 0 && id.Compare(self.Elem.ID()) < 0) {
+func (self *Node) delete(min Comparable, id uintptr, fast bool) (root *Node, d int) {
+	if p := min.Compare(self.Elem.Start()); p < 0 || (p == 0 && id < self.Elem.ID()) {
 		if self.Left != nil {
 			if self.Left.color() == llrb.Black && self.Left.Left.color() == llrb.Black {
 				self = self.moveRedLeft()
@@ -419,14 +419,14 @@ func (self *Node) delete(min, id Comparable, fast bool) (root *Node, d int) {
 		if self.Left.color() == llrb.Red {
 			self = self.rotateRight()
 		}
-		if self.Right == nil && id.Compare(self.Elem.ID()) == 0 {
+		if self.Right == nil && id == self.Elem.ID() {
 			return nil, -1
 		}
 		if self.Right != nil {
 			if self.Right.color() == llrb.Black && self.Right.Left.color() == llrb.Black {
 				self = self.moveRedRight()
 			}
-			if id.Compare(self.Elem.ID()) == 0 {
+			if id == self.Elem.ID() {
 				self.Elem = self.Right.min().Elem
 				self.Right, d = self.Right.deleteMin(fast)
 			} else {
@@ -484,13 +484,13 @@ func (self *Tree) Floor(q Interface) (o Interface, err error) {
 	return n.Elem, nil
 }
 
-func (self *Node) floor(m, id Comparable) *Node {
+func (self *Node) floor(m Comparable, id uintptr) *Node {
 	if self == nil {
 		return nil
 	}
 	switch c := m.Compare(self.Elem.Start()); {
 	case c == 0:
-		switch cid := id.Compare(self.Elem.ID()); {
+		switch cid := id - self.Elem.ID(); {
 		case cid == 0:
 			return self
 		case cid < 0:
@@ -523,13 +523,13 @@ func (self *Tree) Ceil(q Interface) (o Interface, err error) {
 	return n.Elem, nil
 }
 
-func (self *Node) ceil(m, id Comparable) *Node {
+func (self *Node) ceil(m Comparable, id uintptr) *Node {
 	if self == nil {
 		return nil
 	}
 	switch c := m.Compare(self.Elem.Start()); {
 	case c == 0:
-		switch cid := id.Compare(self.Elem.ID()); {
+		switch cid := id - self.Elem.ID(); {
 		case cid == 0:
 			return self
 		case cid > 0:

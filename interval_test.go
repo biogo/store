@@ -161,7 +161,7 @@ func (or overRune) Compare(b Comparable) int {
 func (or overRune) Overlap(b Range) bool {
 	return or == b.(overRune)
 }
-func (or overRune) ID() Comparable        { return or } // Not semantically satisfying interface, but not used.
+func (or overRune) ID() uintptr           { return uintptr(or) } // Not semantically satisfying interface, but not used.
 func (or overRune) Start() Comparable     { return or }
 func (or overRune) End() Comparable       { return or }
 func (or overRune) SetStart(_ Comparable) {}
@@ -174,13 +174,16 @@ func (or compInt) Compare(b Comparable) int {
 	return int(or - b.(compInt))
 }
 
-type overlap struct{ start, end, id compInt }
+type overlap struct {
+	start, end compInt
+	id         uintptr
+}
 
 func (o *overlap) Overlap(b Range) bool {
 	bc := b.(*overlap)
 	return o.end > bc.start && o.start < bc.end
 }
-func (o *overlap) ID() Comparable        { return o.id }
+func (o *overlap) ID() uintptr           { return o.id }
 func (o *overlap) Start() Comparable     { return o.start }
 func (o *overlap) End() Comparable       { return o.end }
 func (o *overlap) SetStart(c Comparable) { o.start = c.(compInt) }
@@ -425,7 +428,7 @@ func (s *S) TestDeletion(c *check.C) {
 		length   = compInt(1)
 	)
 	for i := min; i <= max; i++ {
-		t.Insert(&overlap{start: i, end: i + length, id: i}, false)
+		t.Insert(&overlap{start: i, end: i + length, id: uintptr(i)}, false)
 	}
 	for i := min; i <= max; i++ {
 		var dotString string
@@ -435,7 +438,7 @@ func (s *S) TestDeletion(c *check.C) {
 		if *genDot && t.Len() <= *dotLimit {
 			dotString = t.dot(fmt.Sprintf("TestDeletion_before_del_%d", i))
 		}
-		t.Delete(&overlap{start: i, end: i + length, id: compInt(i)}, false)
+		t.Delete(&overlap{start: i, end: i + length, id: uintptr(i)}, false)
 		c.Check(t.Len(), check.Equals, e)
 		if i < max {
 			failed := false
@@ -472,10 +475,10 @@ func (s *S) TestFastDeletion(c *check.C) {
 		length   = compInt(1)
 	)
 	for i := min; i <= max; i++ {
-		t.Insert(&overlap{start: i, end: i + length, id: i}, false)
+		t.Insert(&overlap{start: i, end: i + length, id: uintptr(i)}, false)
 	}
 	for i := min; i <= max; i++ {
-		t.Delete(&overlap{start: i, end: i + length, id: compInt(i)}, true)
+		t.Delete(&overlap{start: i, end: i + length, id: uintptr(i)}, true)
 		c.Check(t.isBST(), check.Equals, true)
 		c.Check(t.is23_234(), check.Equals, true)
 		c.Check(t.isBalanced(), check.Equals, true)
@@ -631,7 +634,7 @@ func (s *S) TestRandomDeletion(c *check.C) {
 	)
 	for i := range r {
 		s := compInt(rand.Intn(max))
-		r[i] = overlap{start: s, end: s + length, id: compInt(i)}
+		r[i] = overlap{start: s, end: s + length, id: uintptr(i)}
 		t.Insert(&r[i], false)
 	}
 	for i, v := range r {
@@ -789,7 +792,7 @@ func BenchmarkInsert(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
+		t.Insert(&overlap{start: s, end: s + length, id: uintptr(s)}, false)
 	}
 }
 
@@ -801,7 +804,7 @@ func BenchmarkFastInsert(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s}, true)
+		t.Insert(&overlap{start: s, end: s + length, id: uintptr(s)}, true)
 	}
 }
 
@@ -814,7 +817,7 @@ func BenchmarkGet(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
+		t.Insert(&overlap{start: s, end: s + length, id: uintptr(s)}, false)
 	}
 	b.StartTimer()
 	for i := compInt(0); i < N; i++ {
@@ -832,7 +835,7 @@ func BenchmarkMin(b *testing.B) {
 	)
 	for i := compInt(0); i < 1e5; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
+		t.Insert(&overlap{start: s, end: s + length, id: uintptr(s)}, false)
 	}
 	b.StartTimer()
 	var m Interface
@@ -851,7 +854,7 @@ func BenchmarkMax(b *testing.B) {
 	)
 	for i := compInt(0); i < 1e5; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
+		t.Insert(&overlap{start: s, end: s + length, id: uintptr(s)}, false)
 	}
 	b.StartTimer()
 	var m Interface
@@ -870,12 +873,12 @@ func BenchmarkDelete(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
+		t.Insert(&overlap{start: s, end: s + length, id: uintptr(s)}, false)
 	}
 	b.StartTimer()
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Delete(&overlap{start: s, end: s + length, id: s}, false)
+		t.Delete(&overlap{start: s, end: s + length, id: uintptr(s)}, false)
 	}
 }
 
@@ -888,12 +891,12 @@ func BenchmarkFastDelete(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
+		t.Insert(&overlap{start: s, end: s + length, id: uintptr(s)}, false)
 	}
 	b.StartTimer()
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Delete(&overlap{start: s, end: s + length, id: s}, true)
+		t.Delete(&overlap{start: s, end: s + length, id: uintptr(s)}, true)
 	}
 }
 
@@ -906,7 +909,7 @@ func BenchmarkDeleteMin(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
+		t.Insert(&overlap{start: s, end: s + length, id: uintptr(s)}, false)
 	}
 	b.StartTimer()
 	for i := compInt(0); i < N; i++ {
@@ -923,7 +926,7 @@ func BenchmarkFastDeleteMin(b *testing.B) {
 	)
 	for i := compInt(0); i < N; i++ {
 		s := N - i
-		t.Insert(&overlap{start: s, end: s + length, id: s}, false)
+		t.Insert(&overlap{start: s, end: s + length, id: uintptr(s)}, false)
 	}
 	b.StartTimer()
 	for i := compInt(0); i < N; i++ {
