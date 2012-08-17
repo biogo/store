@@ -29,6 +29,7 @@ func (c Int) Compare(b interval.Comparable) int {
 
 type Interval struct {
 	start, end, id Int
+	Sub            []Interval
 	Payload        interface{}
 }
 
@@ -59,177 +60,33 @@ func (m *Mutable) End() interval.Comparable       { return m.end }
 func (m *Mutable) SetStart(c interval.Comparable) { m.start = c.(Int) }
 func (m *Mutable) SetEnd(c interval.Comparable)   { m.end = c.(Int) }
 
-// Integer-specific intervals
-type IntInterval struct {
-	Start, End int
-	UID        uintptr
-	Payload    interface{}
+var ivs = []Interval{
+	{start: 0, end: 2},
+	{start: 2, end: 4},
+	{start: 1, end: 6},
+	{start: 3, end: 4},
+	{start: 1, end: 3},
+	{start: 4, end: 6},
+	{start: 5, end: 8},
+	{start: 6, end: 8},
+	{start: 5, end: 7},
+	{start: 8, end: 9},
 }
 
-func (i IntInterval) Overlap(b interval.IntRange) bool {
-	// Half-open interval indexing.
-	return i.End > b.Start && i.Start < b.End
-}
-func (i IntInterval) ID() uintptr              { return i.UID }
-func (i IntInterval) Range() interval.IntRange { return interval.IntRange{i.Start, i.End} }
-func (i IntInterval) String() string           { return fmt.Sprintf("[%d,%d)#%d", i.Start, i.End, i.UID) }
-
-func Example() {
-	// Generic intervals
-	{
-		ivs := []Interval{
-			{start: 0, end: 2},
-			{start: 2, end: 4},
-			{start: 1, end: 6},
-			{start: 3, end: 4},
-			{start: 1, end: 3},
-			{start: 4, end: 6},
-			{start: 5, end: 8},
-			{start: 6, end: 8},
-			{start: 5, end: 9},
+func Example_1() {
+	t := &interval.Tree{}
+	for i, iv := range ivs {
+		iv.id = Int(i)
+		err := t.Insert(iv, false)
+		if err != nil {
+			fmt.Println(err)
 		}
-
-		t := &interval.Tree{}
-		for i, iv := range ivs {
-			iv.id = Int(i)
-			err := t.Insert(iv, false)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-
-		fmt.Println("Generic interval tree:")
-		fmt.Println(t.Get(Interval{start: 3, end: 6}))
 	}
 
-	// Integer-specific intervals
-	{
-		ivs := []IntInterval{
-			{Start: 0, End: 2},
-			{Start: 2, End: 4},
-			{Start: 1, End: 6},
-			{Start: 3, End: 4},
-			{Start: 1, End: 3},
-			{Start: 4, End: 6},
-			{Start: 5, End: 8},
-			{Start: 6, End: 8},
-			{Start: 5, End: 9},
-		}
-
-		t := &interval.IntTree{}
-		for i, iv := range ivs {
-			iv.UID = uintptr(i)
-			err := t.Insert(iv, false)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-
-		fmt.Println("Integer-specific interval tree:")
-		fmt.Println(t.Get(IntInterval{Start: 3, End: 6}))
-	}
+	fmt.Println("Generic interval tree:")
+	fmt.Println(t.Get(Interval{start: 3, end: 6}))
 
 	// Output:
 	// Generic interval tree:
-	// [[1,6)#2 [2,4)#1 [3,4)#3 [4,6)#5 [5,8)#6 [5,9)#8]
-	// Integer-specific interval tree:
-	// [[1,6)#2 [2,4)#1 [3,4)#3 [4,6)#5 [5,8)#6 [5,9)#8]
-}
-
-func min(a, b interval.Comparable) interval.Comparable {
-	if a.Compare(b) < 0 {
-		return a
-	}
-	return b
-}
-
-func max(a, b interval.Comparable) interval.Comparable {
-	if a.Compare(b) > 0 {
-		return a
-	}
-	return b
-}
-
-func ExampleTree_Do() {
-	// Flatten all overlapping intervals, storing originals as sub-intervals.
-
-	// Given...
-	type Interval struct {
-		start, end interval.Comparable
-		sub        []*Interval
-		interval.Interface
-	}
-	t := &interval.Tree{}
-
-	var (
-		fi = true
-		ti []*Interval
-	)
-
-	t.Do(
-		func(e interval.Interface) (done bool) {
-			iv := e.(*Interval)
-			if fi || iv.start.Compare(ti[len(ti)-1].end) > 0 {
-				ti = append(ti, &Interval{
-					start: iv.start,
-					end:   iv.end,
-				})
-				fi = false
-			} else {
-				ti[len(ti)-1].end = max(ti[len(ti)-1].end, iv.end)
-			}
-			ti[len(ti)-1].sub = append(ti[len(ti)-1].sub, iv)
-
-			return
-		},
-	)
-	t.Root, t.Count = nil, 0
-	for _, iv := range ti {
-		t.Insert(iv, true)
-	}
-	t.AdjustRanges()
-}
-
-func ExampleTree_DoMatching() {
-	// Merge an interval into the tree, replacing overlapping intervals, but retaining them as sub intervals.
-
-	// Given...
-	type Interval struct {
-		start, end interval.Comparable
-		sub        []*Interval
-		interval.Interface
-	}
-	t := &interval.Tree{}
-	ni := &Interval{}
-
-	var (
-		fi = true
-		qi = &Interval{start: ni.start, end: ni.end}
-		r  []interval.Interface
-	)
-
-	t.DoMatching(
-		func(e interval.Interface) (done bool) {
-			iv := e.(*Interval)
-			r = append(r, e)
-			ni.sub = append(ni.sub, iv)
-
-			// Flatten merge history.
-			ni.sub = append(ni.sub, iv.sub...)
-			iv.sub = nil
-
-			if fi {
-				ni.start = min(iv.start, ni.start)
-				fi = false
-			}
-			ni.end = max(iv.end, ni.end)
-
-			return
-		},
-		qi,
-	)
-	for _, d := range r {
-		t.Delete(d, false)
-	}
-	t.Insert(ni, false)
+	// [[1,6)#2 [2,4)#1 [3,4)#3 [4,6)#5 [5,8)#6 [5,7)#8]
 }
