@@ -81,103 +81,102 @@ type Tree struct {
 // Helper methods
 
 // color returns the effect color of a Node. A nil node returns black.
-func (self *Node) color() Color {
-	if self == nil {
+func (n *Node) color() Color {
+	if n == nil {
 		return Black
 	}
-	return self.Color
+	return n.Color
 }
 
 // (a,c)b -rotL-> ((a,)b,)c
-func (self *Node) rotateLeft() (root *Node) {
-	// Assumes: self has two children.
-	root = self.Right
-	self.Right = root.Left
-	root.Left = self
-	root.Color = self.Color
-	self.Color = Red
+func (n *Node) rotateLeft() (root *Node) {
+	// Assumes: n has two children.
+	root = n.Right
+	n.Right = root.Left
+	root.Left = n
+	root.Color = n.Color
+	n.Color = Red
 	return
 }
 
 // (a,c)b -rotR-> (,(,c)b)a
-func (self *Node) rotateRight() (root *Node) {
-	// Assumes: self has two children.
-	root = self.Left
-	self.Left = root.Right
-	root.Right = self
-	root.Color = self.Color
-	self.Color = Red
+func (n *Node) rotateRight() (root *Node) {
+	// Assumes: n has two children.
+	root = n.Left
+	n.Left = root.Right
+	root.Right = n
+	root.Color = n.Color
+	n.Color = Red
 	return
 }
 
 // (aR,cR)bB -flipC-> (aB,cB)bR | (aB,cB)bR -flipC-> (aR,cR)bB 
-func (self *Node) flipColors() {
-	// Assumes: self has two children.
-	self.Color = !self.Color
-	self.Left.Color = !self.Left.Color
-	self.Right.Color = !self.Right.Color
+func (n *Node) flipColors() {
+	// Assumes: n has two children.
+	n.Color = !n.Color
+	n.Left.Color = !n.Left.Color
+	n.Right.Color = !n.Right.Color
 }
 
 // fixUp ensures that black link balance is correct, that red nodes lean left,
 // and that 4 nodes are split in the case of BU23 and properly balanced in TD234.
-func (self *Node) fixUp() *Node {
-	if self.Right.color() == Red {
-		if Mode == TD234 && self.Right.Left.color() == Red {
-			self.Right = self.Right.rotateRight()
+func (n *Node) fixUp() *Node {
+	if n.Right.color() == Red {
+		if Mode == TD234 && n.Right.Left.color() == Red {
+			n.Right = n.Right.rotateRight()
 		}
-		self = self.rotateLeft()
+		n = n.rotateLeft()
 	}
-	if self.Left.color() == Red && self.Left.Left.color() == Red {
-		self = self.rotateRight()
+	if n.Left.color() == Red && n.Left.Left.color() == Red {
+		n = n.rotateRight()
 	}
-	if Mode == BU23 && self.Left.color() == Red && self.Right.color() == Red {
-		self.flipColors()
+	if Mode == BU23 && n.Left.color() == Red && n.Right.color() == Red {
+		n.flipColors()
 	}
-	return self
+	return n
 }
 
-func (self *Node) moveRedLeft() *Node {
-	self.flipColors()
-	if self.Right.Left.color() == Red {
-		self.Right = self.Right.rotateRight()
-		self = self.rotateLeft()
-		self.flipColors()
-		if Mode == TD234 && self.Right.Right.color() == Red {
-			self.Right = self.Right.rotateLeft()
+func (n *Node) moveRedLeft() *Node {
+	n.flipColors()
+	if n.Right.Left.color() == Red {
+		n.Right = n.Right.rotateRight()
+		n = n.rotateLeft()
+		n.flipColors()
+		if Mode == TD234 && n.Right.Right.color() == Red {
+			n.Right = n.Right.rotateLeft()
 		}
 	}
-	return self
+	return n
 }
 
-func (self *Node) moveRedRight() *Node {
-	self.flipColors()
-	if self.Left.Left.color() == Red {
-		self = self.rotateRight()
-		self.flipColors()
+func (n *Node) moveRedRight() *Node {
+	n.flipColors()
+	if n.Left.Left.color() == Red {
+		n = n.rotateRight()
+		n.flipColors()
 	}
-	return self
+	return n
 }
 
 // Len returns the number of elements stored in the Tree.
-func (self *Tree) Len() int {
-	return self.Count
+func (t *Tree) Len() int {
+	return t.Count
 }
 
 // Get returns the first match of q in the Tree. If insertion without
 // replacement is used, this is probably not what you want.
-func (self *Tree) Get(q Comparable) Comparable {
-	if self.Root == nil {
+func (t *Tree) Get(q Comparable) Comparable {
+	if t.Root == nil {
 		return nil
 	}
-	n := self.Root.search(q)
+	n := t.Root.search(q)
 	if n == nil {
 		return nil
 	}
 	return n.Elem
 }
 
-func (self *Node) search(q Comparable) (n *Node) {
-	n = self
+func (n *Node) search(q Comparable) *Node {
 	for n != nil {
 		switch c := q.Compare(n.Elem); {
 		case c == 0:
@@ -189,7 +188,7 @@ func (self *Node) search(q Comparable) (n *Node) {
 		}
 	}
 
-	return
+	return n
 }
 
 // Insert inserts the Comparable e into the Tree at the first match found
@@ -197,111 +196,111 @@ func (self *Node) search(q Comparable) (n *Node) {
 // specified by ensuring that e.Compare() never returns 0. If insert without
 // replacement is performed, a distinct query Comparable must be used that
 // can return 0 with a Compare() call.
-func (self *Tree) Insert(e Comparable) {
+func (t *Tree) Insert(e Comparable) {
 	var d int
-	self.Root, d = self.Root.insert(e)
-	self.Count += d
-	self.Root.Color = Black
+	t.Root, d = t.Root.insert(e)
+	t.Count += d
+	t.Root.Color = Black
 }
 
-func (self *Node) insert(e Comparable) (root *Node, d int) {
-	if self == nil {
+func (n *Node) insert(e Comparable) (root *Node, d int) {
+	if n == nil {
 		return &Node{Elem: e}, 1
-	} else if self.Elem == nil {
-		self.Elem = e
-		return self, 1
+	} else if n.Elem == nil {
+		n.Elem = e
+		return n, 1
 	}
 
 	if Mode == TD234 {
-		if self.Left.color() == Red && self.Right.color() == Red {
-			self.flipColors()
+		if n.Left.color() == Red && n.Right.color() == Red {
+			n.flipColors()
 		}
 	}
 
-	switch c := e.Compare(self.Elem); {
+	switch c := e.Compare(n.Elem); {
 	case c == 0:
-		self.Elem = e
+		n.Elem = e
 	case c < 0:
-		self.Left, d = self.Left.insert(e)
+		n.Left, d = n.Left.insert(e)
 	default:
-		self.Right, d = self.Right.insert(e)
+		n.Right, d = n.Right.insert(e)
 	}
 
-	if self.Right.color() == Red && self.Left.color() == Black {
-		self = self.rotateLeft()
+	if n.Right.color() == Red && n.Left.color() == Black {
+		n = n.rotateLeft()
 	}
-	if self.Left.color() == Red && self.Left.Left.color() == Red {
-		self = self.rotateRight()
+	if n.Left.color() == Red && n.Left.Left.color() == Red {
+		n = n.rotateRight()
 	}
 
 	if Mode == BU23 {
-		if self.Left.color() == Red && self.Right.color() == Red {
-			self.flipColors()
+		if n.Left.color() == Red && n.Right.color() == Red {
+			n.flipColors()
 		}
 	}
 
-	root = self
+	root = n
 
 	return
 }
 
 // DeleteMin deletes the node with the minimum value in the tree. If insertion without
 // replacement has been used, the left-most minimum will be deleted.
-func (self *Tree) DeleteMin() {
-	if self.Root == nil {
+func (t *Tree) DeleteMin() {
+	if t.Root == nil {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.deleteMin()
-	self.Count += d
-	if self.Root == nil {
+	t.Root, d = t.Root.deleteMin()
+	t.Count += d
+	if t.Root == nil {
 		return
 	}
-	self.Root.Color = Black
+	t.Root.Color = Black
 }
 
-func (self *Node) deleteMin() (root *Node, d int) {
-	if self.Left == nil {
+func (n *Node) deleteMin() (root *Node, d int) {
+	if n.Left == nil {
 		return nil, -1
 	}
-	if self.Left.color() == Black && self.Left.Left.color() == Black {
-		self = self.moveRedLeft()
+	if n.Left.color() == Black && n.Left.Left.color() == Black {
+		n = n.moveRedLeft()
 	}
-	self.Left, d = self.Left.deleteMin()
+	n.Left, d = n.Left.deleteMin()
 
-	root = self.fixUp()
+	root = n.fixUp()
 
 	return
 }
 
 // DeleteMax deletes the node with the maximum value in the tree. If insertion without
 // replacement has been used, the right-most maximum will be deleted.
-func (self *Tree) DeleteMax() {
-	if self.Root == nil {
+func (t *Tree) DeleteMax() {
+	if t.Root == nil {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.deleteMax()
-	self.Count += d
-	if self.Root == nil {
+	t.Root, d = t.Root.deleteMax()
+	t.Count += d
+	if t.Root == nil {
 		return
 	}
-	self.Root.Color = Black
+	t.Root.Color = Black
 }
 
-func (self *Node) deleteMax() (root *Node, d int) {
-	if self.Left != nil && self.Left.color() == Red {
-		self = self.rotateRight()
+func (n *Node) deleteMax() (root *Node, d int) {
+	if n.Left != nil && n.Left.color() == Red {
+		n = n.rotateRight()
 	}
-	if self.Right == nil {
+	if n.Right == nil {
 		return nil, -1
 	}
-	if self.Right.color() == Black && self.Right.Left.color() == Black {
-		self = self.moveRedRight()
+	if n.Right.color() == Black && n.Right.Left.color() == Black {
+		n = n.moveRedRight()
 	}
-	self.Right, d = self.Right.deleteMax()
+	n.Right, d = n.Right.deleteMax()
 
-	root = self.fixUp()
+	root = n.fixUp()
 
 	return
 }
@@ -309,138 +308,138 @@ func (self *Node) deleteMax() (root *Node, d int) {
 // Delete deletes the node that matches e according to Compare(). Note that Compare must
 // identify the target node uniquely and in cases where non-unique keys are used,
 // attributes used to break ties must be used to determine tree ordering during insertion.
-func (self *Tree) Delete(e Comparable) {
-	if self.Root == nil {
+func (t *Tree) Delete(e Comparable) {
+	if t.Root == nil {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.delete(e)
-	self.Count += d
-	if self.Root == nil {
+	t.Root, d = t.Root.delete(e)
+	t.Count += d
+	if t.Root == nil {
 		return
 	}
-	self.Root.Color = Black
+	t.Root.Color = Black
 }
 
-func (self *Node) delete(e Comparable) (root *Node, d int) {
-	if e.Compare(self.Elem) < 0 {
-		if self.Left != nil {
-			if self.Left.color() == Black && self.Left.Left.color() == Black {
-				self = self.moveRedLeft()
+func (n *Node) delete(e Comparable) (root *Node, d int) {
+	if e.Compare(n.Elem) < 0 {
+		if n.Left != nil {
+			if n.Left.color() == Black && n.Left.Left.color() == Black {
+				n = n.moveRedLeft()
 			}
-			self.Left, d = self.Left.delete(e)
+			n.Left, d = n.Left.delete(e)
 		}
 	} else {
-		if self.Left.color() == Red {
-			self = self.rotateRight()
+		if n.Left.color() == Red {
+			n = n.rotateRight()
 		}
-		if self.Right == nil && e.Compare(self.Elem) == 0 {
+		if n.Right == nil && e.Compare(n.Elem) == 0 {
 			return nil, -1
 		}
-		if self.Right != nil {
-			if self.Right.color() == Black && self.Right.Left.color() == Black {
-				self = self.moveRedRight()
+		if n.Right != nil {
+			if n.Right.color() == Black && n.Right.Left.color() == Black {
+				n = n.moveRedRight()
 			}
-			if e.Compare(self.Elem) == 0 {
-				self.Elem = self.Right.min().Elem
-				self.Right, d = self.Right.deleteMin()
+			if e.Compare(n.Elem) == 0 {
+				n.Elem = n.Right.min().Elem
+				n.Right, d = n.Right.deleteMin()
 			} else {
-				self.Right, d = self.Right.delete(e)
+				n.Right, d = n.Right.delete(e)
 			}
 		}
 	}
 
-	root = self.fixUp()
+	root = n.fixUp()
 
 	return
 }
 
 // Return the minimum value stored in the tree. This will be the left-most minimum value if
 // insertion without replacement has been used.
-func (self *Tree) Min() Comparable {
-	if self.Root == nil {
+func (t *Tree) Min() Comparable {
+	if t.Root == nil {
 		return nil
 	}
-	return self.Root.min().Elem
+	return t.Root.min().Elem
 }
 
-func (self *Node) min() (n *Node) {
-	for n = self; n.Left != nil; n = n.Left {
+func (n *Node) min() *Node {
+	for ; n.Left != nil; n = n.Left {
 	}
-	return
+	return n
 }
 
 // Return the maximum value stored in the tree. This will be the right-most maximum value if
 // insertion without replacement has been used.
-func (self *Tree) Max() Comparable {
-	if self.Root == nil {
+func (t *Tree) Max() Comparable {
+	if t.Root == nil {
 		return nil
 	}
-	return self.Root.max().Elem
+	return t.Root.max().Elem
 }
 
-func (self *Node) max() (n *Node) {
-	for n = self; n.Right != nil; n = n.Right {
+func (n *Node) max() *Node {
+	for ; n.Right != nil; n = n.Right {
 	}
-	return
+	return n
 }
 
 // Floor returns the greatest value equal to or less than the query q according to q.Compare().
-func (self *Tree) Floor(q Comparable) Comparable {
-	if self.Root == nil {
+func (t *Tree) Floor(q Comparable) Comparable {
+	if t.Root == nil {
 		return nil
 	}
-	n := self.Root.floor(q)
+	n := t.Root.floor(q)
 	if n == nil {
 		return nil
 	}
 	return n.Elem
 }
 
-func (self *Node) floor(q Comparable) *Node {
-	if self == nil {
+func (n *Node) floor(q Comparable) *Node {
+	if n == nil {
 		return nil
 	}
-	switch c := q.Compare(self.Elem); {
+	switch c := q.Compare(n.Elem); {
 	case c == 0:
-		return self
+		return n
 	case c < 0:
-		return self.Left.floor(q)
+		return n.Left.floor(q)
 	default:
-		if r := self.Right.floor(q); r != nil {
+		if r := n.Right.floor(q); r != nil {
 			return r
 		}
 	}
-	return self
+	return n
 }
 
 // Ceil returns the smallest value equal to or greater than the query q according to q.Compare().
-func (self *Tree) Ceil(q Comparable) Comparable {
-	if self.Root == nil {
+func (t *Tree) Ceil(q Comparable) Comparable {
+	if t.Root == nil {
 		return nil
 	}
-	n := self.Root.ceil(q)
+	n := t.Root.ceil(q)
 	if n == nil {
 		return nil
 	}
 	return n.Elem
 }
 
-func (self *Node) ceil(q Comparable) *Node {
-	if self == nil {
+func (n *Node) ceil(q Comparable) *Node {
+	if n == nil {
 		return nil
 	}
-	switch c := q.Compare(self.Elem); {
+	switch c := q.Compare(n.Elem); {
 	case c == 0:
-		return self
+		return n
 	case c > 0:
-		return self.Right.ceil(q)
+		return n.Right.ceil(q)
 	default:
-		if l := self.Left.ceil(q); l != nil {
+		if l := n.Left.ceil(q); l != nil {
 			return l
 		}
 	}
-	return self
+	return n
 }
 
 // An Operation is a function that operates on a Comparable. If done is returned true, the
@@ -451,26 +450,26 @@ type Operation func(Comparable) (done bool)
 // Do performs fn on all values stored in the tree. A boolean is returned indicating whether the
 // Do traversal was interrupted by an Operation returning true. If fn alters stored values' sort
 // relationships, future tree operation behaviors are undefined.
-func (self *Tree) Do(fn Operation) bool {
-	if self.Root == nil {
+func (t *Tree) Do(fn Operation) bool {
+	if t.Root == nil {
 		return false
 	}
-	return self.Root.do(fn)
+	return t.Root.do(fn)
 }
 
-func (self *Node) do(fn Operation) (done bool) {
-	if self.Left != nil {
-		done = self.Left.do(fn)
+func (n *Node) do(fn Operation) (done bool) {
+	if n.Left != nil {
+		done = n.Left.do(fn)
 		if done {
 			return
 		}
 	}
-	done = fn(self.Elem)
+	done = fn(n.Elem)
 	if done {
 		return
 	}
-	if self.Right != nil {
-		done = self.Right.do(fn)
+	if n.Right != nil {
+		done = n.Right.do(fn)
 	}
 	return
 }
@@ -478,26 +477,26 @@ func (self *Node) do(fn Operation) (done bool) {
 // DoReverse performs fn on all values stored in the tree, but in reverse of sort order. A boolean
 // is returned indicating whether the Do traversal was interrupted by an Operation returning true.
 // If fn alters stored values' sort relationships, future tree operation behaviors are undefined.
-func (self *Tree) DoReverse(fn Operation) bool {
-	if self.Root == nil {
+func (t *Tree) DoReverse(fn Operation) bool {
+	if t.Root == nil {
 		return false
 	}
-	return self.Root.doReverse(fn)
+	return t.Root.doReverse(fn)
 }
 
-func (self *Node) doReverse(fn Operation) (done bool) {
-	if self.Right != nil {
-		done = self.Right.doReverse(fn)
+func (n *Node) doReverse(fn Operation) (done bool) {
+	if n.Right != nil {
+		done = n.Right.doReverse(fn)
 		if done {
 			return
 		}
 	}
-	done = fn(self.Elem)
+	done = fn(n.Elem)
 	if done {
 		return
 	}
-	if self.Left != nil {
-		done = self.Left.doReverse(fn)
+	if n.Left != nil {
+		done = n.Left.doReverse(fn)
 	}
 	return
 }
@@ -507,35 +506,35 @@ func (self *Node) doReverse(fn Operation) (done bool) {
 // panic. A boolean is returned indicating whether the Do traversal was interrupted by an
 // Operation returning true. If fn alters stored values' sort relationships future tree
 // operation behaviors are undefined.
-func (self *Tree) DoRange(fn Operation, from, to Comparable) bool {
-	if self.Root == nil {
+func (t *Tree) DoRange(fn Operation, from, to Comparable) bool {
+	if t.Root == nil {
 		return false
 	}
 	switch order := from.Compare(to); {
 	case order < 0:
-		return self.Root.doRange(fn, from, to)
+		return t.Root.doRange(fn, from, to)
 	case order > 0:
 		panic("llrb: inverted range")
 	}
 	return false
 }
 
-func (self *Node) doRange(fn Operation, lo, hi Comparable) (done bool) {
-	lc, hc := lo.Compare(self.Elem), hi.Compare(self.Elem)
-	if lc <= 0 && self.Left != nil {
-		done = self.Left.doRange(fn, lo, hi)
+func (n *Node) doRange(fn Operation, lo, hi Comparable) (done bool) {
+	lc, hc := lo.Compare(n.Elem), hi.Compare(n.Elem)
+	if lc <= 0 && n.Left != nil {
+		done = n.Left.doRange(fn, lo, hi)
 		if done {
 			return
 		}
 	}
 	if lc <= 0 && hc > 0 {
-		done = fn(self.Elem)
+		done = fn(n.Elem)
 		if done {
 			return
 		}
 	}
-	if hc > 0 && self.Right != nil {
-		done = self.Right.doRange(fn, lo, hi)
+	if hc > 0 && n.Right != nil {
+		done = n.Right.doRange(fn, lo, hi)
 	}
 	return
 }
@@ -545,35 +544,35 @@ func (self *Node) doRange(fn Operation, lo, hi Comparable) (done bool) {
 // panic. A boolean is returned indicating whether the Do traversal was interrupted by an Operation
 // returning true. If fn alters stored values' sort relationships future tree operation behaviors
 // are undefined.
-func (self *Tree) DoRangeReverse(fn Operation, from, to Comparable) bool {
-	if self.Root == nil {
+func (t *Tree) DoRangeReverse(fn Operation, from, to Comparable) bool {
+	if t.Root == nil {
 		return false
 	}
 	switch order := from.Compare(to); {
 	case order > 0:
-		return self.Root.doRangeReverse(fn, from, to)
+		return t.Root.doRangeReverse(fn, from, to)
 	case order < 0:
 		panic("llrb: inverted range")
 	}
 	return false
 }
 
-func (self *Node) doRangeReverse(fn Operation, hi, lo Comparable) (done bool) {
-	lc, hc := lo.Compare(self.Elem), hi.Compare(self.Elem)
-	if hc > 0 && self.Right != nil {
-		done = self.Right.doRangeReverse(fn, hi, lo)
+func (n *Node) doRangeReverse(fn Operation, hi, lo Comparable) (done bool) {
+	lc, hc := lo.Compare(n.Elem), hi.Compare(n.Elem)
+	if hc > 0 && n.Right != nil {
+		done = n.Right.doRangeReverse(fn, hi, lo)
 		if done {
 			return
 		}
 	}
 	if lc <= 0 && hc > 0 {
-		done = fn(self.Elem)
+		done = fn(n.Elem)
 		if done {
 			return
 		}
 	}
-	if lc <= 0 && self.Left != nil {
-		done = self.Left.doRangeReverse(fn, hi, lo)
+	if lc <= 0 && n.Left != nil {
+		done = n.Left.doRangeReverse(fn, hi, lo)
 	}
 	return
 }
@@ -584,29 +583,29 @@ func (self *Node) doRangeReverse(fn Operation, hi, lo Comparable) (done bool) {
 // the condition is independent of sort order. A boolean is returned indicating whether the Do
 // traversal was interrupted by an Operation returning true. If fn alters stored values' sort
 // relationships, future tree operation behaviors are undefined.
-func (self *Tree) DoMatching(fn Operation, q Comparable) bool {
-	if self.Root == nil {
+func (t *Tree) DoMatching(fn Operation, q Comparable) bool {
+	if t.Root == nil {
 		return false
 	}
-	return self.Root.doMatch(fn, q)
+	return t.Root.doMatch(fn, q)
 }
 
-func (self *Node) doMatch(fn Operation, q Comparable) (done bool) {
-	c := q.Compare(self.Elem)
-	if c <= 0 && self.Left != nil {
-		done = self.Left.doMatch(fn, q)
+func (n *Node) doMatch(fn Operation, q Comparable) (done bool) {
+	c := q.Compare(n.Elem)
+	if c <= 0 && n.Left != nil {
+		done = n.Left.doMatch(fn, q)
 		if done {
 			return
 		}
 	}
 	if c == 0 {
-		done = fn(self.Elem)
+		done = fn(n.Elem)
 		if done {
 			return
 		}
 	}
-	if c >= 0 && self.Right != nil {
-		done = self.Right.doMatch(fn, q)
+	if c >= 0 && n.Right != nil {
+		done = n.Right.doMatch(fn, q)
 	}
 	return
 }
