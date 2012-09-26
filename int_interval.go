@@ -57,86 +57,86 @@ type IntTree struct {
 // Helper methods
 
 // color returns the effect color of a IntNode. A nil node returns black.
-func (self *IntNode) color() llrb.Color {
-	if self == nil {
+func (n *IntNode) color() llrb.Color {
+	if n == nil {
 		return llrb.Black
 	}
-	return self.Color
+	return n.Color
 }
 
 // (a,c)b -rotL-> ((a,)b,)c
-func (self *IntNode) rotateLeft() (root *IntNode) {
-	// Assumes: self has two children.
-	root = self.Right
+func (n *IntNode) rotateLeft() (root *IntNode) {
+	// Assumes: n has two children.
+	root = n.Right
 	if root.Left != nil {
-		self.Range.End = intMax(self.Interval.End, root.Left.Range.End)
+		n.Range.End = intMax(n.Interval.End, root.Left.Range.End)
 	} else {
-		self.Range.End = self.Interval.End
+		n.Range.End = n.Interval.End
 	}
-	root.Range.Start = intMin(root.Interval.Start, self.Range.Start)
-	self.Right = root.Left
-	root.Left = self
-	root.Color = self.Color
-	self.Color = llrb.Red
+	root.Range.Start = intMin(root.Interval.Start, n.Range.Start)
+	n.Right = root.Left
+	root.Left = n
+	root.Color = n.Color
+	n.Color = llrb.Red
 	return
 }
 
 // (a,c)b -rotR-> (,(,c)b)a
-func (self *IntNode) rotateRight() (root *IntNode) {
-	// Assumes: self has two children.
-	root = self.Left
+func (n *IntNode) rotateRight() (root *IntNode) {
+	// Assumes: n has two children.
+	root = n.Left
 	if root.Right != nil {
-		self.Range.Start = intMin(self.Interval.Start, root.Right.Range.Start)
+		n.Range.Start = intMin(n.Interval.Start, root.Right.Range.Start)
 	} else {
-		self.Range.Start = self.Interval.Start
+		n.Range.Start = n.Interval.Start
 	}
-	root.Range.End = intMax(root.Interval.End, self.Range.End)
-	self.Left = root.Right
-	root.Right = self
-	root.Color = self.Color
-	self.Color = llrb.Red
+	root.Range.End = intMax(root.Interval.End, n.Range.End)
+	n.Left = root.Right
+	root.Right = n
+	root.Color = n.Color
+	n.Color = llrb.Red
 	return
 }
 
 // (aR,cR)bB -flipC-> (aB,cB)bR | (aB,cB)bR -flipC-> (aR,cR)bB 
-func (self *IntNode) flipColors() {
-	// Assumes: self has two children.
-	self.Color = !self.Color
-	self.Left.Color = !self.Left.Color
-	self.Right.Color = !self.Right.Color
+func (n *IntNode) flipColors() {
+	// Assumes: n has two children.
+	n.Color = !n.Color
+	n.Left.Color = !n.Left.Color
+	n.Right.Color = !n.Right.Color
 }
 
 // fixUp ensures that black link balance is correct, that red nodes lean left,
 // and that 4 nodes are split in the case of BU23 and properly balanced in TD234.
-func (self *IntNode) fixUp(fast bool) *IntNode {
+func (n *IntNode) fixUp(fast bool) *IntNode {
 	if !fast {
-		self.adjustRange()
+		n.adjustRange()
 	}
-	if self.Right.color() == llrb.Red {
-		if Mode == TD234 && self.Right.Left.color() == llrb.Red {
-			self.Right = self.Right.rotateRight()
+	if n.Right.color() == llrb.Red {
+		if Mode == TD234 && n.Right.Left.color() == llrb.Red {
+			n.Right = n.Right.rotateRight()
 		}
-		self = self.rotateLeft()
+		n = n.rotateLeft()
 	}
-	if self.Left.color() == llrb.Red && self.Left.Left.color() == llrb.Red {
-		self = self.rotateRight()
+	if n.Left.color() == llrb.Red && n.Left.Left.color() == llrb.Red {
+		n = n.rotateRight()
 	}
-	if Mode == BU23 && self.Left.color() == llrb.Red && self.Right.color() == llrb.Red {
-		self.flipColors()
+	if Mode == BU23 && n.Left.color() == llrb.Red && n.Right.color() == llrb.Red {
+		n.flipColors()
 	}
 
-	return self
+	return n
 }
 
 // adjustRange sets the Range to the maximum extent of the childrens' Range
 // spans and the node's Elem span.
-func (self *IntNode) adjustRange() {
-	if self.Left != nil {
-		self.Range.Start = intMin(self.Interval.Start, self.Left.Range.Start)
-		self.Range.End = intMax(self.Interval.End, self.Left.Range.End)
+func (n *IntNode) adjustRange() {
+	if n.Left != nil {
+		n.Range.Start = intMin(n.Interval.Start, n.Left.Range.Start)
+		n.Range.End = intMax(n.Interval.End, n.Left.Range.End)
 	}
-	if self.Right != nil {
-		self.Range.End = intMax(self.Interval.End, self.Right.Range.End)
+	if n.Right != nil {
+		n.Range.End = intMax(n.Interval.End, n.Right.Range.End)
 	}
 }
 
@@ -154,361 +154,361 @@ func intMax(a, b int) int {
 	return b
 }
 
-func (self *IntNode) moveRedLeft() *IntNode {
-	self.flipColors()
-	if self.Right.Left.color() == llrb.Red {
-		self.Right = self.Right.rotateRight()
-		self = self.rotateLeft()
-		self.flipColors()
-		if Mode == TD234 && self.Right.Right.color() == llrb.Red {
-			self.Right = self.Right.rotateLeft()
+func (n *IntNode) moveRedLeft() *IntNode {
+	n.flipColors()
+	if n.Right.Left.color() == llrb.Red {
+		n.Right = n.Right.rotateRight()
+		n = n.rotateLeft()
+		n.flipColors()
+		if Mode == TD234 && n.Right.Right.color() == llrb.Red {
+			n.Right = n.Right.rotateLeft()
 		}
 	}
-	return self
+	return n
 }
 
-func (self *IntNode) moveRedRight() *IntNode {
-	self.flipColors()
-	if self.Left.Left.color() == llrb.Red {
-		self = self.rotateRight()
-		self.flipColors()
+func (n *IntNode) moveRedRight() *IntNode {
+	n.flipColors()
+	if n.Left.Left.color() == llrb.Red {
+		n = n.rotateRight()
+		n.flipColors()
 	}
-	return self
+	return n
 }
 
 // Len returns the number of intervals stored in the IntTree.
-func (self *IntTree) Len() int {
-	return self.Count
+func (t *IntTree) Len() int {
+	return t.Count
 }
 
 // Get returns a slice of IntInterfaces that overlap q in the IntTree according
 // to Overlap.
-func (self *IntTree) Get(q IntOverlapper) (o []IntInterface) {
-	if self.Root != nil && q.Overlap(self.Root.Range) {
-		self.Root.doMatch(func(e IntInterface) (done bool) { o = append(o, e); return }, q)
+func (t *IntTree) Get(q IntOverlapper) (o []IntInterface) {
+	if t.Root != nil && q.Overlap(t.Root.Range) {
+		t.Root.doMatch(func(e IntInterface) (done bool) { o = append(o, e); return }, q)
 	}
 	return
 }
 
 // AdjustRanges fixes range fields for all IntNodes in the IntTree. This must be called
 // before Get or DoMatching* is used if fast insertion or deletion has been performed.
-func (self *IntTree) AdjustRanges() {
-	if self.Root == nil {
+func (t *IntTree) AdjustRanges() {
+	if t.Root == nil {
 		return
 	}
-	self.Root.adjustRanges()
+	t.Root.adjustRanges()
 }
 
-func (self *IntNode) adjustRanges() {
-	if self.Left != nil {
-		self.Left.adjustRanges()
+func (n *IntNode) adjustRanges() {
+	if n.Left != nil {
+		n.Left.adjustRanges()
 	}
-	if self.Right != nil {
-		self.Right.adjustRanges()
+	if n.Right != nil {
+		n.Right.adjustRanges()
 	}
-	self.adjustRange()
+	n.adjustRange()
 }
 
 // Insert inserts the IntInterface e into the IntTree. Insertions may replace
 // existing stored intervals.
-func (self *IntTree) Insert(e IntInterface, fast bool) (err error) {
+func (t *IntTree) Insert(e IntInterface, fast bool) (err error) {
 	if r := e.Range(); r.Start > r.End {
 		return ErrInvertedRange
 	}
 	var d int
-	self.Root, d = self.Root.insert(e, e.Range(), e.ID(), fast)
-	self.Count += d
-	self.Root.Color = llrb.Black
+	t.Root, d = t.Root.insert(e, e.Range(), e.ID(), fast)
+	t.Count += d
+	t.Root.Color = llrb.Black
 	return
 }
 
-func (self *IntNode) insert(e IntInterface, r IntRange, id uintptr, fast bool) (root *IntNode, d int) {
-	if self == nil {
+func (n *IntNode) insert(e IntInterface, r IntRange, id uintptr, fast bool) (root *IntNode, d int) {
+	if n == nil {
 		return &IntNode{Elem: e, Interval: r, Range: r}, 1
-	} else if self.Elem == nil {
-		self.Elem = e
-		self.Interval = r
+	} else if n.Elem == nil {
+		n.Elem = e
+		n.Interval = r
 		if !fast {
-			self.adjustRange()
+			n.adjustRange()
 		}
-		return self, 1
+		return n, 1
 	}
 
 	if Mode == TD234 {
-		if self.Left.color() == llrb.Red && self.Right.color() == llrb.Red {
-			self.flipColors()
+		if n.Left.color() == llrb.Red && n.Right.color() == llrb.Red {
+			n.flipColors()
 		}
 	}
 
-	switch c := r.Start - self.Interval.Start; {
+	switch c := r.Start - n.Interval.Start; {
 	case c == 0:
-		switch cid := id - self.Elem.ID(); {
+		switch cid := id - n.Elem.ID(); {
 		case cid == 0:
-			self.Elem = e
-			self.Interval = r
+			n.Elem = e
+			n.Interval = r
 			if !fast {
-				self.Range.End = r.End
+				n.Range.End = r.End
 			}
 		case cid < 0:
-			self.Left, d = self.Left.insert(e, r, id, fast)
+			n.Left, d = n.Left.insert(e, r, id, fast)
 		default:
-			self.Right, d = self.Right.insert(e, r, id, fast)
+			n.Right, d = n.Right.insert(e, r, id, fast)
 		}
 	case c < 0:
-		self.Left, d = self.Left.insert(e, r, id, fast)
+		n.Left, d = n.Left.insert(e, r, id, fast)
 	default:
-		self.Right, d = self.Right.insert(e, r, id, fast)
+		n.Right, d = n.Right.insert(e, r, id, fast)
 	}
 
-	if self.Right.color() == llrb.Red && self.Left.color() == llrb.Black {
-		self = self.rotateLeft()
+	if n.Right.color() == llrb.Red && n.Left.color() == llrb.Black {
+		n = n.rotateLeft()
 	}
-	if self.Left.color() == llrb.Red && self.Left.Left.color() == llrb.Red {
-		self = self.rotateRight()
+	if n.Left.color() == llrb.Red && n.Left.Left.color() == llrb.Red {
+		n = n.rotateRight()
 	}
 
 	if Mode == BU23 {
-		if self.Left.color() == llrb.Red && self.Right.color() == llrb.Red {
-			self.flipColors()
+		if n.Left.color() == llrb.Red && n.Right.color() == llrb.Red {
+			n.flipColors()
 		}
 	}
 
 	if !fast {
-		self.adjustRange()
+		n.adjustRange()
 	}
-	root = self
+	root = n
 
 	return
 }
 
 // DeleteMin deletes the left-most interval.
-func (self *IntTree) DeleteMin(fast bool) {
-	if self.Root == nil {
+func (t *IntTree) DeleteMin(fast bool) {
+	if t.Root == nil {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.deleteMin(fast)
-	self.Count += d
-	if self.Root == nil {
+	t.Root, d = t.Root.deleteMin(fast)
+	t.Count += d
+	if t.Root == nil {
 		return
 	}
-	self.Root.Color = llrb.Black
+	t.Root.Color = llrb.Black
 }
 
-func (self *IntNode) deleteMin(fast bool) (root *IntNode, d int) {
-	if self.Left == nil {
+func (n *IntNode) deleteMin(fast bool) (root *IntNode, d int) {
+	if n.Left == nil {
 		return nil, -1
 	}
-	if self.Left.color() == llrb.Black && self.Left.Left.color() == llrb.Black {
-		self = self.moveRedLeft()
+	if n.Left.color() == llrb.Black && n.Left.Left.color() == llrb.Black {
+		n = n.moveRedLeft()
 	}
-	self.Left, d = self.Left.deleteMin(fast)
-	if self.Left == nil {
-		self.Range.Start = self.Elem.Range().Start
+	n.Left, d = n.Left.deleteMin(fast)
+	if n.Left == nil {
+		n.Range.Start = n.Elem.Range().Start
 	}
 
-	root = self.fixUp(fast)
+	root = n.fixUp(fast)
 
 	return
 }
 
 // DeleteMax deletes the right-most interval.
-func (self *IntTree) DeleteMax(fast bool) {
-	if self.Root == nil {
+func (t *IntTree) DeleteMax(fast bool) {
+	if t.Root == nil {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.deleteMax(fast)
-	self.Count += d
-	if self.Root == nil {
+	t.Root, d = t.Root.deleteMax(fast)
+	t.Count += d
+	if t.Root == nil {
 		return
 	}
-	self.Root.Color = llrb.Black
+	t.Root.Color = llrb.Black
 }
 
-func (self *IntNode) deleteMax(fast bool) (root *IntNode, d int) {
-	if self.Left != nil && self.Left.color() == llrb.Red {
-		self = self.rotateRight()
+func (n *IntNode) deleteMax(fast bool) (root *IntNode, d int) {
+	if n.Left != nil && n.Left.color() == llrb.Red {
+		n = n.rotateRight()
 	}
-	if self.Right == nil {
+	if n.Right == nil {
 		return nil, -1
 	}
-	if self.Right.color() == llrb.Black && self.Right.Left.color() == llrb.Black {
-		self = self.moveRedRight()
+	if n.Right.color() == llrb.Black && n.Right.Left.color() == llrb.Black {
+		n = n.moveRedRight()
 	}
-	self.Right, d = self.Right.deleteMax(fast)
-	if self.Right == nil {
-		self.Range.End = self.Elem.Range().End
+	n.Right, d = n.Right.deleteMax(fast)
+	if n.Right == nil {
+		n.Range.End = n.Elem.Range().End
 	}
 
-	root = self.fixUp(fast)
+	root = n.fixUp(fast)
 
 	return
 }
 
 // Delete deletes the element e if it exists in the IntTree.
-func (self *IntTree) Delete(e IntInterface, fast bool) (err error) {
+func (t *IntTree) Delete(e IntInterface, fast bool) (err error) {
 	if r := e.Range(); r.Start > r.End {
 		return ErrInvertedRange
 	}
-	if self.Root == nil || !e.Overlap(self.Root.Range) {
+	if t.Root == nil || !e.Overlap(t.Root.Range) {
 		return
 	}
 	var d int
-	self.Root, d = self.Root.delete(e.Range().Start, e.ID(), fast)
-	self.Count += d
-	if self.Root == nil {
+	t.Root, d = t.Root.delete(e.Range().Start, e.ID(), fast)
+	t.Count += d
+	if t.Root == nil {
 		return
 	}
-	self.Root.Color = llrb.Black
+	t.Root.Color = llrb.Black
 	return
 }
 
-func (self *IntNode) delete(m int, id uintptr, fast bool) (root *IntNode, d int) {
-	if p := m - self.Interval.Start; p < 0 || (p == 0 && id < self.Elem.ID()) {
-		if self.Left != nil {
-			if self.Left.color() == llrb.Black && self.Left.Left.color() == llrb.Black {
-				self = self.moveRedLeft()
+func (n *IntNode) delete(m int, id uintptr, fast bool) (root *IntNode, d int) {
+	if p := m - n.Interval.Start; p < 0 || (p == 0 && id < n.Elem.ID()) {
+		if n.Left != nil {
+			if n.Left.color() == llrb.Black && n.Left.Left.color() == llrb.Black {
+				n = n.moveRedLeft()
 			}
-			self.Left, d = self.Left.delete(m, id, fast)
-			if self.Left == nil {
-				self.Range.Start = self.Interval.Start
+			n.Left, d = n.Left.delete(m, id, fast)
+			if n.Left == nil {
+				n.Range.Start = n.Interval.Start
 			}
 		}
 	} else {
-		if self.Left.color() == llrb.Red {
-			self = self.rotateRight()
+		if n.Left.color() == llrb.Red {
+			n = n.rotateRight()
 		}
-		if self.Right == nil && id == self.Elem.ID() {
+		if n.Right == nil && id == n.Elem.ID() {
 			return nil, -1
 		}
-		if self.Right != nil {
-			if self.Right.color() == llrb.Black && self.Right.Left.color() == llrb.Black {
-				self = self.moveRedRight()
+		if n.Right != nil {
+			if n.Right.color() == llrb.Black && n.Right.Left.color() == llrb.Black {
+				n = n.moveRedRight()
 			}
-			if id == self.Elem.ID() {
-				m := self.Right.min()
-				self.Elem = m.Elem
-				self.Interval = m.Interval
-				self.Right, d = self.Right.deleteMin(fast)
+			if id == n.Elem.ID() {
+				m := n.Right.min()
+				n.Elem = m.Elem
+				n.Interval = m.Interval
+				n.Right, d = n.Right.deleteMin(fast)
 			} else {
-				self.Right, d = self.Right.delete(m, id, fast)
+				n.Right, d = n.Right.delete(m, id, fast)
 			}
-			if self.Right == nil {
-				self.Range.End = self.Interval.End
+			if n.Right == nil {
+				n.Range.End = n.Interval.End
 			}
 		}
 	}
 
-	root = self.fixUp(fast)
+	root = n.fixUp(fast)
 
 	return
 }
 
 // Return the left-most interval stored in the tree.
-func (self *IntTree) Min() IntInterface {
-	if self.Root == nil {
+func (t *IntTree) Min() IntInterface {
+	if t.Root == nil {
 		return nil
 	}
-	return self.Root.min().Elem
+	return t.Root.min().Elem
 }
 
-func (self *IntNode) min() (n *IntNode) {
-	for n = self; n.Left != nil; n = n.Left {
+func (n *IntNode) min() *IntNode {
+	for ; n.Left != nil; n = n.Left {
 	}
-	return
+	return n
 }
 
 // Return the right-most interval stored in the tree.
-func (self *IntTree) Max() IntInterface {
-	if self.Root == nil {
+func (t *IntTree) Max() IntInterface {
+	if t.Root == nil {
 		return nil
 	}
-	return self.Root.max().Elem
+	return t.Root.max().Elem
 }
 
-func (self *IntNode) max() (n *IntNode) {
-	for n = self; n.Right != nil; n = n.Right {
+func (n *IntNode) max() *IntNode {
+	for ; n.Right != nil; n = n.Right {
 	}
-	return
+	return n
 }
 
 // Floor returns the largest value equal to or less than the query q according to
 // q.Start().Compare(), with ties broken by q.ID().Compare().
-func (self *IntTree) Floor(q IntInterface) (o IntInterface, err error) {
-	if self.Root == nil {
+func (t *IntTree) Floor(q IntInterface) (o IntInterface, err error) {
+	if t.Root == nil {
 		return
 	}
-	n := self.Root.floor(q.Range().Start, q.ID())
+	n := t.Root.floor(q.Range().Start, q.ID())
 	if n == nil {
 		return
 	}
 	return n.Elem, nil
 }
 
-func (self *IntNode) floor(m int, id uintptr) *IntNode {
-	if self == nil {
+func (n *IntNode) floor(m int, id uintptr) *IntNode {
+	if n == nil {
 		return nil
 	}
-	switch c := m - self.Interval.Start; {
+	switch c := m - n.Interval.Start; {
 	case c == 0:
-		switch cid := id - self.Elem.ID(); {
+		switch cid := id - n.Elem.ID(); {
 		case cid == 0:
-			return self
+			return n
 		case cid < 0:
-			return self.Left.floor(m, id)
+			return n.Left.floor(m, id)
 		default:
-			if r := self.Right.floor(m, id); r != nil {
+			if r := n.Right.floor(m, id); r != nil {
 				return r
 			}
 		}
 	case c < 0:
-		return self.Left.floor(m, id)
+		return n.Left.floor(m, id)
 	default:
-		if r := self.Right.floor(m, id); r != nil {
+		if r := n.Right.floor(m, id); r != nil {
 			return r
 		}
 	}
-	return self
+	return n
 }
 
 // Ceil returns the smallest value equal to or greater than the query q according to
 // q.Start().Compare(), with ties broken by q.ID().Compare().
-func (self *IntTree) Ceil(q IntInterface) (o IntInterface, err error) {
-	if self.Root == nil {
+func (t *IntTree) Ceil(q IntInterface) (o IntInterface, err error) {
+	if t.Root == nil {
 		return
 	}
-	n := self.Root.ceil(q.Range().Start, q.ID())
+	n := t.Root.ceil(q.Range().Start, q.ID())
 	if n == nil {
 		return
 	}
 	return n.Elem, nil
 }
 
-func (self *IntNode) ceil(m int, id uintptr) *IntNode {
-	if self == nil {
+func (n *IntNode) ceil(m int, id uintptr) *IntNode {
+	if n == nil {
 		return nil
 	}
-	switch c := m - self.Interval.Start; {
+	switch c := m - n.Interval.Start; {
 	case c == 0:
-		switch cid := id - self.Elem.ID(); {
+		switch cid := id - n.Elem.ID(); {
 		case cid == 0:
-			return self
+			return n
 		case cid > 0:
-			return self.Right.ceil(m, id)
+			return n.Right.ceil(m, id)
 		default:
-			if l := self.Left.ceil(m, id); l != nil {
+			if l := n.Left.ceil(m, id); l != nil {
 				return l
 			}
 		}
 	case c > 0:
-		return self.Right.ceil(m, id)
+		return n.Right.ceil(m, id)
 	default:
-		if l := self.Left.ceil(m, id); l != nil {
+		if l := n.Left.ceil(m, id); l != nil {
 			return l
 		}
 	}
-	return self
+	return n
 }
 
 // An IntOperation is a function that operates on an IntInterface. If done is returned true, the
@@ -519,26 +519,26 @@ type IntOperation func(IntInterface) (done bool)
 // Do performs fn on all intervals stored in the tree. A boolean is returned indicating whether the
 // Do traversal was interrupted by an IntOperation returning true. If fn alters stored intervals'
 // end points, future tree operation behaviors are undefined.
-func (self *IntTree) Do(fn IntOperation) bool {
-	if self.Root == nil {
+func (t *IntTree) Do(fn IntOperation) bool {
+	if t.Root == nil {
 		return false
 	}
-	return self.Root.do(fn)
+	return t.Root.do(fn)
 }
 
-func (self *IntNode) do(fn IntOperation) (done bool) {
-	if self.Left != nil {
-		done = self.Left.do(fn)
+func (n *IntNode) do(fn IntOperation) (done bool) {
+	if n.Left != nil {
+		done = n.Left.do(fn)
 		if done {
 			return
 		}
 	}
-	done = fn(self.Elem)
+	done = fn(n.Elem)
 	if done {
 		return
 	}
-	if self.Right != nil {
-		done = self.Right.do(fn)
+	if n.Right != nil {
+		done = n.Right.do(fn)
 	}
 	return
 }
@@ -546,26 +546,26 @@ func (self *IntNode) do(fn IntOperation) (done bool) {
 // DoReverse performs fn on all intervals stored in the tree, but in reverse of sort order. A boolean
 // is returned indicating whether the Do traversal was interrupted by an IntOperation returning true.
 // If fn alters stored intervals' end points, future tree operation behaviors are undefined.
-func (self *IntTree) DoReverse(fn IntOperation) bool {
-	if self.Root == nil {
+func (t *IntTree) DoReverse(fn IntOperation) bool {
+	if t.Root == nil {
 		return false
 	}
-	return self.Root.doReverse(fn)
+	return t.Root.doReverse(fn)
 }
 
-func (self *IntNode) doReverse(fn IntOperation) (done bool) {
-	if self.Right != nil {
-		done = self.Right.doReverse(fn)
+func (n *IntNode) doReverse(fn IntOperation) (done bool) {
+	if n.Right != nil {
+		done = n.Right.doReverse(fn)
 		if done {
 			return
 		}
 	}
-	done = fn(self.Elem)
+	done = fn(n.Elem)
 	if done {
 		return
 	}
-	if self.Left != nil {
-		done = self.Left.doReverse(fn)
+	if n.Left != nil {
+		done = n.Left.doReverse(fn)
 	}
 	return
 }
@@ -576,28 +576,28 @@ func (self *IntNode) doReverse(fn IntOperation) (done bool) {
 // the condition is independent of sort order. A boolean is returned indicating whether the Do
 // traversal was interrupted by an IntOperation returning true. If fn alters stored intervals' end
 // points, future tree operation behaviors are undefined.
-func (self *IntTree) DoMatching(fn IntOperation, q IntOverlapper) (t bool) {
-	if self.Root != nil && q.Overlap(self.Root.Range) {
-		return self.Root.doMatch(fn, q)
+func (t *IntTree) DoMatching(fn IntOperation, q IntOverlapper) bool {
+	if t.Root != nil && q.Overlap(t.Root.Range) {
+		return t.Root.doMatch(fn, q)
 	}
-	return
+	return false
 }
 
-func (self *IntNode) doMatch(fn IntOperation, q IntOverlapper) (done bool) {
-	if self.Left != nil && q.Overlap(self.Left.Range) {
-		done = self.Left.doMatch(fn, q)
+func (n *IntNode) doMatch(fn IntOperation, q IntOverlapper) (done bool) {
+	if n.Left != nil && q.Overlap(n.Left.Range) {
+		done = n.Left.doMatch(fn, q)
 		if done {
 			return
 		}
 	}
-	if q.Overlap(self.Interval) {
-		done = fn(self.Elem)
+	if q.Overlap(n.Interval) {
+		done = fn(n.Elem)
 		if done {
 			return
 		}
 	}
-	if self.Right != nil && q.Overlap(self.Right.Range) {
-		done = self.Right.doMatch(fn, q)
+	if n.Right != nil && q.Overlap(n.Right.Range) {
+		done = n.Right.doMatch(fn, q)
 	}
 	return
 }
@@ -608,28 +608,28 @@ func (self *IntNode) doMatch(fn IntOperation, q IntOverlapper) (done bool) {
 // the condition is independent of sort order. A boolean is returned indicating whether the Do
 // traversal was interrupted by an IntOperation returning true. If fn alters stored intervals' end
 // points, future tree operation behaviors are undefined.
-func (self *IntTree) DoMatchingReverse(fn IntOperation, q IntOverlapper) (t bool) {
-	if self.Root != nil && q.Overlap(self.Root.Range) {
-		return self.Root.doMatch(fn, q)
+func (t *IntTree) DoMatchingReverse(fn IntOperation, q IntOverlapper) bool {
+	if t.Root != nil && q.Overlap(t.Root.Range) {
+		return t.Root.doMatch(fn, q)
 	}
-	return
+	return false
 }
 
-func (self *IntNode) doMatchReverse(fn IntOperation, q IntOverlapper) (done bool) {
-	if self.Right != nil && q.Overlap(self.Right.Range) {
-		done = self.Right.doMatchReverse(fn, q)
+func (n *IntNode) doMatchReverse(fn IntOperation, q IntOverlapper) (done bool) {
+	if n.Right != nil && q.Overlap(n.Right.Range) {
+		done = n.Right.doMatchReverse(fn, q)
 		if done {
 			return
 		}
 	}
-	if q.Overlap(self.Interval) {
-		done = fn(self.Elem)
+	if q.Overlap(n.Interval) {
+		done = fn(n.Elem)
 		if done {
 			return
 		}
 	}
-	if self.Left != nil && q.Overlap(self.Left.Range) {
-		done = self.Left.doMatchReverse(fn, q)
+	if n.Left != nil && q.Overlap(n.Left.Range) {
+		done = n.Left.doMatchReverse(fn, q)
 	}
 	return
 }
