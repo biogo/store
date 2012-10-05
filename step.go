@@ -99,11 +99,11 @@ type Vector struct {
 // and the ground state defined by zero. The Vector's extent is mutable
 // if the Relaxed field is set to true. If a zero length vector is requested
 // an error is returned.
-func New(start, end int, zero Equaler) (v *Vector, err error) {
+func New(start, end int, zero Equaler) (*Vector, error) {
 	if start >= end {
 		return nil, ErrZeroLength
 	}
-	v = &Vector{
+	v := &Vector{
 		Zero: zero,
 		t:    &llrb.Tree{},
 		min: &position{
@@ -118,195 +118,195 @@ func New(start, end int, zero Equaler) (v *Vector, err error) {
 	v.t.Insert(v.min)
 	v.t.Insert(v.max)
 
-	return
+	return v, nil
 }
 
 // Start returns the index of minimum position of the Vector.
-func (self *Vector) Start() int { return self.min.pos }
+func (v *Vector) Start() int { return v.min.pos }
 
 // End returns the index of lowest position beyond the end of the Vector.
-func (self *Vector) End() int { return self.max.pos }
+func (v *Vector) End() int { return v.max.pos }
 
 // Len returns the length of the represented data array, that is the distance
 // between the start and end of the vector.
-func (self *Vector) Len() int { return self.End() - self.Start() }
+func (v *Vector) Len() int { return v.End() - v.Start() }
 
 // Count returns the number of steps represented in the vector.
-func (self *Vector) Count() int { return self.t.Len() - 1 }
+func (v *Vector) Count() int { return v.t.Len() - 1 }
 
 // At returns the value of the vector at position i. If i is outside the extent
 // of the vector an error is returned.
-func (self *Vector) At(i int) (v Equaler, err error) {
-	if i < self.Start() || i >= self.End() {
+func (v *Vector) At(i int) (e Equaler, err error) {
+	if i < v.Start() || i >= v.End() {
 		return nil, ErrOutOfRange
 	}
-	st := self.t.Floor(query(i)).(*position)
+	st := v.t.Floor(query(i)).(*position)
 	return st.val, nil
 }
 
 // StepAt returns the value and range of the step at i, where start <= i < end.
 // If i is outside the extent of the vector, an error is returned.
-func (self *Vector) StepAt(i int) (start, end int, v Equaler, err error) {
-	if i < self.Start() || i >= self.End() {
+func (v *Vector) StepAt(i int) (start, end int, e Equaler, err error) {
+	if i < v.Start() || i >= v.End() {
 		return 0, 0, nil, ErrOutOfRange
 	}
-	lo := self.t.Floor(query(i)).(*position)
-	hi := self.t.Ceil(upper(i)).(*position)
+	lo := v.t.Floor(query(i)).(*position)
+	hi := v.t.Ceil(upper(i)).(*position)
 	return lo.pos, hi.pos, lo.val, nil
 }
 
-// Set sets the value of position i to v.
-func (self *Vector) Set(i int, v Equaler) {
-	if i < self.min.pos || self.max.pos <= i {
-		if !self.Relaxed {
+// Set sets the value of position i to e.
+func (v *Vector) Set(i int, e Equaler) {
+	if i < v.min.pos || v.max.pos <= i {
+		if !v.Relaxed {
 			panic(ErrOutOfRange)
 		}
 
-		if i < self.min.pos {
-			if i == self.min.pos-1 {
-				if v.Equal(self.min.val) {
-					self.min.pos--
+		if i < v.min.pos {
+			if i == v.min.pos-1 {
+				if e.Equal(v.min.val) {
+					v.min.pos--
 				} else {
-					self.min = &position{pos: i, val: v}
-					self.t.Insert(self.min)
+					v.min = &position{pos: i, val: e}
+					v.t.Insert(v.min)
 				}
 			} else {
-				if self.min.val.Equal(self.Zero) {
-					self.min.pos = i + 1
+				if v.min.val.Equal(v.Zero) {
+					v.min.pos = i + 1
 				} else {
-					self.min = &position{pos: i + 1, val: self.Zero}
-					self.t.Insert(self.min)
+					v.min = &position{pos: i + 1, val: v.Zero}
+					v.t.Insert(v.min)
 				}
-				if v.Equal(self.Zero) {
-					self.min.pos--
+				if e.Equal(v.Zero) {
+					v.min.pos--
 				} else {
-					self.min = &position{pos: i, val: v}
-					self.t.Insert(self.min)
+					v.min = &position{pos: i, val: e}
+					v.t.Insert(v.min)
 				}
 			}
-		} else if i >= self.max.pos {
-			if i == self.max.pos {
-				self.max.pos++
-				prev := self.t.Floor(query(i)).(*position)
-				if !v.Equal(prev.val) {
-					self.t.Insert(&position{pos: i, val: v})
+		} else if i >= v.max.pos {
+			if i == v.max.pos {
+				v.max.pos++
+				prev := v.t.Floor(query(i)).(*position)
+				if !e.Equal(prev.val) {
+					v.t.Insert(&position{pos: i, val: e})
 				}
 			} else {
-				mpos := self.max.pos
-				self.max.pos = i + 1
-				prev := self.t.Floor(query(i)).(*position)
-				if !prev.val.Equal(self.Zero) {
-					self.t.Insert(&position{pos: mpos, val: self.Zero})
+				mpos := v.max.pos
+				v.max.pos = i + 1
+				prev := v.t.Floor(query(i)).(*position)
+				if !prev.val.Equal(v.Zero) {
+					v.t.Insert(&position{pos: mpos, val: v.Zero})
 				}
-				if !v.Equal(self.Zero) {
-					self.t.Insert(&position{pos: i, val: v})
+				if !e.Equal(v.Zero) {
+					v.t.Insert(&position{pos: i, val: e})
 				}
 			}
 		}
 		return
 	}
 
-	lo := self.t.Floor(query(i)).(*position)
-	if v.Equal(lo.val) {
+	lo := v.t.Floor(query(i)).(*position)
+	if e.Equal(lo.val) {
 		return
 	}
-	hi := self.t.Ceil(upper(i)).(*position)
+	hi := v.t.Ceil(upper(i)).(*position)
 
 	if lo.pos == i {
 		if hi.pos == i+1 {
-			if hi != self.max && v.Equal(hi.val) {
-				self.t.Delete(query(i))
+			if hi != v.max && e.Equal(hi.val) {
+				v.t.Delete(query(i))
 				hi.pos--
 			} else {
-				lo.val = v
+				lo.val = e
 			}
-			if i > self.min.pos {
-				prev := self.t.Floor(query(i - 1)).(*position)
-				if v.Equal(prev.val) {
-					self.t.Delete(query(i))
+			if i > v.min.pos {
+				prev := v.t.Floor(query(i - 1)).(*position)
+				if e.Equal(prev.val) {
+					v.t.Delete(query(i))
 				}
 			}
 		} else {
 			lo.pos = i + 1
-			prev := self.t.Floor(query(i))
+			prev := v.t.Floor(query(i))
 			if prev == nil {
-				self.min = &position{pos: i, val: v}
-				self.t.Insert(self.min)
-			} else if !v.Equal(prev.(*position).val) {
-				self.t.Insert(&position{pos: i, val: v})
+				v.min = &position{pos: i, val: e}
+				v.t.Insert(v.min)
+			} else if !e.Equal(prev.(*position).val) {
+				v.t.Insert(&position{pos: i, val: e})
 			}
 		}
 	} else {
 		if hi.pos == i+1 {
-			if hi != self.max && v.Equal(hi.val) {
+			if hi != v.max && e.Equal(hi.val) {
 				hi.pos--
 			} else {
-				self.t.Insert(&position{pos: i, val: v})
+				v.t.Insert(&position{pos: i, val: e})
 			}
 		} else {
-			self.t.Insert(&position{pos: i, val: v})
-			self.t.Insert(&position{pos: i + 1, val: lo.val})
+			v.t.Insert(&position{pos: i, val: e})
+			v.t.Insert(&position{pos: i + 1, val: lo.val})
 		}
 	}
 }
 
-// SetRange sets the value of positions [start, end) to v.
-// The underlying type of v must be comparable by reflect.DeepEqual.
-func (self *Vector) SetRange(start, end int, v Equaler) {
+// SetRange sets the value of positions [start, end) to e.
+// The underlying type of e must be comparable by reflect.DeepEqual.
+func (v *Vector) SetRange(start, end int, e Equaler) {
 	l := end - start
 	switch {
 	case l == 0:
 		return
 	case l == 1:
-		self.Set(start, v)
+		v.Set(start, e)
 		return
 	case l < 0:
 		panic(ErrInvertedRange)
 	}
 
-	if end <= self.min.pos || self.max.pos <= start {
-		if !self.Relaxed {
+	if end <= v.min.pos || v.max.pos <= start {
+		if !v.Relaxed {
 			panic(ErrOutOfRange)
 		}
 
-		if end <= self.min.pos {
-			if end == self.min.pos {
-				if v.Equal(self.min.val) {
-					self.min.pos -= l
+		if end <= v.min.pos {
+			if end == v.min.pos {
+				if e.Equal(v.min.val) {
+					v.min.pos -= l
 				} else {
-					self.min = &position{pos: start, val: v}
-					self.t.Insert(self.min)
+					v.min = &position{pos: start, val: e}
+					v.t.Insert(v.min)
 				}
 			} else {
-				if self.min.val.Equal(self.Zero) {
-					self.min.pos = end
+				if v.min.val.Equal(v.Zero) {
+					v.min.pos = end
 				} else {
-					self.min = &position{pos: end, val: self.Zero}
-					self.t.Insert(self.min)
+					v.min = &position{pos: end, val: v.Zero}
+					v.t.Insert(v.min)
 				}
-				if v.Equal(self.Zero) {
-					self.min.pos -= l
+				if e.Equal(v.Zero) {
+					v.min.pos -= l
 				} else {
-					self.min = &position{pos: start, val: v}
-					self.t.Insert(self.min)
+					v.min = &position{pos: start, val: e}
+					v.t.Insert(v.min)
 				}
 			}
-		} else if start >= self.max.pos {
-			if start == self.max.pos {
-				self.max.pos += l
-				prev := self.t.Floor(query(start)).(*position)
-				if !v.Equal(prev.val) {
-					self.t.Insert(&position{pos: start, val: v})
+		} else if start >= v.max.pos {
+			if start == v.max.pos {
+				v.max.pos += l
+				prev := v.t.Floor(query(start)).(*position)
+				if !e.Equal(prev.val) {
+					v.t.Insert(&position{pos: start, val: e})
 				}
 			} else {
-				mpos := self.max.pos
-				self.max.pos = end
-				prev := self.t.Floor(query(start)).(*position)
-				if !prev.val.Equal(self.Zero) {
-					self.t.Insert(&position{pos: mpos, val: self.Zero})
+				mpos := v.max.pos
+				v.max.pos = end
+				prev := v.t.Floor(query(start)).(*position)
+				if !prev.val.Equal(v.Zero) {
+					v.t.Insert(&position{pos: mpos, val: v.Zero})
 				}
-				if !v.Equal(self.Zero) {
-					self.t.Insert(&position{pos: start, val: v})
+				if !e.Equal(v.Zero) {
+					v.t.Insert(&position{pos: start, val: e})
 				}
 			}
 		}
@@ -314,12 +314,12 @@ func (self *Vector) SetRange(start, end int, v Equaler) {
 	}
 
 	delQ := []llrb.Comparable{}
-	self.t.DoRange(func(c llrb.Comparable) (done bool) {
+	v.t.DoRange(func(c llrb.Comparable) (done bool) {
 		delQ = append(delQ, c)
 		return
 	}, query(start), query(end))
 	for _, p := range delQ {
-		self.t.Delete(p)
+		v.t.Delete(p)
 	}
 
 	var la, lo *position
@@ -327,59 +327,59 @@ func (self *Vector) SetRange(start, end int, v Equaler) {
 		lo = delQ[0].(*position)
 		la = delQ[len(delQ)-1].(*position)
 	} else {
-		lo = self.t.Floor(query(start)).(*position)
+		lo = v.t.Floor(query(start)).(*position)
 		la = &position{}
 		*la = *lo
 	}
 
-	hi := self.t.Ceil(query(end)).(*position)
+	hi := v.t.Ceil(query(end)).(*position)
 	if start == lo.pos {
 		var prevSame bool
-		prev := self.t.Floor(query(start - 1))
+		prev := v.t.Floor(query(start - 1))
 		if prev != nil {
-			prevSame = v.Equal(prev.(*position).val)
+			prevSame = e.Equal(prev.(*position).val)
 		}
-		hiSame := hi != self.max && v.Equal(hi.val)
+		hiSame := hi != v.max && e.Equal(hi.val)
 		if hi.pos == end {
 			switch {
 			case hiSame && prevSame:
-				self.t.Delete(hi)
+				v.t.Delete(hi)
 			case prevSame:
 				return
 			case hiSame:
 				hi.pos = start
 			default:
 				if prev == nil {
-					self.min = &position{pos: start, val: v}
-					self.t.Insert(self.min)
+					v.min = &position{pos: start, val: e}
+					v.t.Insert(v.min)
 				} else {
-					self.t.Insert(&position{pos: start, val: v})
+					v.t.Insert(&position{pos: start, val: e})
 				}
 			}
 		} else {
 			la.pos = end
-			if !v.Equal(la.val) {
-				self.t.Insert(la)
+			if !e.Equal(la.val) {
+				v.t.Insert(la)
 			}
 			if prev == nil {
-				self.min = &position{pos: start, val: v}
-				self.t.Insert(self.min)
+				v.min = &position{pos: start, val: e}
+				v.t.Insert(v.min)
 			} else if !prevSame {
-				self.t.Insert(&position{pos: start, val: v})
+				v.t.Insert(&position{pos: start, val: e})
 			}
 		}
 	} else {
 		if hi.pos == end {
-			if hi != self.max && v.Equal(hi.val) {
+			if hi != v.max && e.Equal(hi.val) {
 				hi.pos = start
 			} else {
-				self.t.Insert(&position{pos: start, val: v})
+				v.t.Insert(&position{pos: start, val: e})
 			}
 		} else {
-			self.t.Insert(&position{pos: start, val: v})
+			v.t.Insert(&position{pos: start, val: e})
 			la.pos = end
-			if !v.Equal(la.val) {
-				self.t.Insert(la)
+			if !e.Equal(la.val) {
+				v.t.Insert(la)
 			}
 		}
 	}
@@ -387,17 +387,17 @@ func (self *Vector) SetRange(start, end int, v Equaler) {
 
 // An Operation is a non-mutating function that can be applied to a vector using Do
 // and DoRange.
-type Operation func(start, end int, v Equaler)
+type Operation func(start, end int, e Equaler)
 
 // Do performs the function fn on steps stored in the Vector in ascending sort order
 // of start position. fn is passed the start, end and value of the step.
-func (self *Vector) Do(fn Operation) {
+func (v *Vector) Do(fn Operation) {
 	var (
 		la  *position
-		min = self.min.pos
+		min = v.min.pos
 	)
 
-	self.t.Do(func(c llrb.Comparable) (done bool) {
+	v.t.Do(func(c llrb.Comparable) (done bool) {
 		p := c.(*position)
 		if p.pos != min {
 			fn(la.pos, p.pos, la.val)
@@ -410,22 +410,22 @@ func (self *Vector) Do(fn Operation) {
 // Do performs the function fn on steps stored in the Vector over the range [from, to)
 // in ascending sort order of start position. fn is passed the start, end and value of
 // the step.
-func (self *Vector) DoRange(from, to int, fn Operation) (err error) {
+func (v *Vector) DoRange(from, to int, fn Operation) (err error) {
 	if to < from {
 		return ErrInvertedRange
 	}
 	var (
 		la  *position
-		min = self.min.pos
-		max = self.max.pos
+		min = v.min.pos
+		max = v.max.pos
 	)
 	if to <= min || from >= max {
 		return ErrOutOfRange
 	}
 
-	_, end, v, _ := self.StepAt(from)
-	fn(from, end, v)
-	self.t.DoRange(func(c llrb.Comparable) (done bool) {
+	_, end, e, _ := v.StepAt(from)
+	fn(from, end, e)
+	v.t.DoRange(func(c llrb.Comparable) (done bool) {
 		p := c.(*position)
 		if p.pos != end {
 			fn(la.pos, p.pos, la.val)
@@ -454,22 +454,22 @@ var (
 	DecFloat Mutator = decFloat // Decrement a float64 value.
 )
 
-func incInt(v Equaler) Equaler   { return v.(Int) + 1 }
-func decInt(v Equaler) Equaler   { return v.(Int) - 1 }
-func incFloat(v Equaler) Equaler { return v.(Float) + 1 }
-func decFloat(v Equaler) Equaler { return v.(Float) - 1 }
+func incInt(e Equaler) Equaler   { return e.(Int) + 1 }
+func decInt(e Equaler) Equaler   { return e.(Int) - 1 }
+func incFloat(e Equaler) Equaler { return e.(Float) + 1 }
+func decFloat(e Equaler) Equaler { return e.(Float) - 1 }
 
 // Apply applies the mutator function m to steps stored in the Vector in ascending sort order
 // of start position. Redundant steps resulting from changes in step values are erased.
-func (self *Vector) Apply(m Mutator) {
+func (v *Vector) Apply(m Mutator) {
 	var (
 		la   Equaler
-		min  = self.min.pos
-		max  = self.max.pos
+		min  = v.min.pos
+		max  = v.max.pos
 		delQ []query
 	)
 
-	self.t.Do(func(c llrb.Comparable) (done bool) {
+	v.t.Do(func(c llrb.Comparable) (done bool) {
 		p := c.(*position)
 		if p.pos == max {
 			return true
@@ -483,22 +483,22 @@ func (self *Vector) Apply(m Mutator) {
 	})
 
 	for _, d := range delQ {
-		self.t.Delete(d)
+		v.t.Delete(d)
 	}
 }
 
 // Apply applies the mutator function m to steps stored in the Vector in over the range
 // [from, to) in ascending sort order of start position. Redundant steps resulting from
 // changes in step values are erased.
-func (self *Vector) ApplyRange(from, to int, m Mutator) (err error) {
+func (v *Vector) ApplyRange(from, to int, m Mutator) (err error) {
 	if to < from {
 		return ErrInvertedRange
 	}
 	var (
 		la   Equaler
 		old  position
-		min  = self.min.pos
-		max  = self.max.pos
+		min  = v.min.pos
+		max  = v.max.pos
 		delQ []query
 	)
 	if to <= min || from >= max {
@@ -506,17 +506,17 @@ func (self *Vector) ApplyRange(from, to int, m Mutator) (err error) {
 	}
 
 	var end int
-	old.pos, end, old.val, _ = self.StepAt(from)
+	old.pos, end, old.val, _ = v.StepAt(from)
 	la = old.val
 	la = m(la)
 	if to <= end {
-		self.SetRange(from, to, la)
+		v.SetRange(from, to, la)
 		return
 	}
 	if !la.Equal(old.val) {
-		self.t.Insert(&position{from, la})
+		v.t.Insert(&position{from, la})
 	}
-	self.t.DoRange(func(c llrb.Comparable) (done bool) {
+	v.t.DoRange(func(c llrb.Comparable) (done bool) {
 		p := c.(*position)
 		if p.pos == max {
 			return true
@@ -531,16 +531,16 @@ func (self *Vector) ApplyRange(from, to int, m Mutator) (err error) {
 	}, query(end), query(to))
 
 	if to < max {
-		p := self.t.Ceil(query(to)).(*position)
-		if p.pos > to && (p == self.max || !p.val.Equal(old.val)) {
-			self.t.Insert(&position{pos: to, val: old.val})
+		p := v.t.Ceil(query(to)).(*position)
+		if p.pos > to && (p == v.max || !p.val.Equal(old.val)) {
+			v.t.Insert(&position{pos: to, val: old.val})
 		} else if p.val.Equal(la) {
 			delQ = append(delQ, query(p.pos))
 		}
 	}
 
 	for _, d := range delQ {
-		self.t.Delete(d)
+		v.t.Delete(d)
 	}
 
 	return
@@ -549,9 +549,9 @@ func (self *Vector) ApplyRange(from, to int, m Mutator) (err error) {
 // String returns a string representation a Vector, displaying step start
 // positions and values. The last step indicates the end of the vector and
 // always has an associated value of nil.
-func (self *Vector) String() string {
+func (v *Vector) String() string {
 	sb := []string(nil)
-	self.t.Do(func(c llrb.Comparable) (done bool) {
+	v.t.Do(func(c llrb.Comparable) (done bool) {
 		p := c.(*position)
 		sb = append(sb, fmt.Sprintf("%d:%v", p.pos, p.val))
 		return
