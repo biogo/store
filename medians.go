@@ -16,7 +16,6 @@
 package kdtree
 
 import (
-	"fmt"
 	"math/rand"
 	"sort"
 )
@@ -58,7 +57,7 @@ func Select(list SortSlicer, k int) int {
 		if k == 0 {
 			return 0
 		}
-		panic(fmt.Sprintf("kdtree: index out of range"))
+		panic("kdtree: index out of range")
 	}
 	if start == end-1 {
 		return k
