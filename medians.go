@@ -104,7 +104,7 @@ func MedianOfMedians(list SortSlicer) int {
 	return n / 2
 }
 
-// RandomOfMedians returns the index to the median value of up to n randomly chosen elements in list.
+// MedianOfRandoms returns the index to the median value of up to n randomly chosen elements in list.
 func MedianOfRandoms(list SortSlicer, n int) int {
 	if l := list.Len(); n <= l {
 		for i := 0; i < n; i++ {
