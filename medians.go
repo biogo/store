@@ -52,29 +52,29 @@ type SortSlicer interface {
 func Select(list SortSlicer, k int) int {
 	var (
 		start int
-		e     = list.Len()
+		end   = list.Len()
 	)
-	if k >= e {
+	if k >= end {
 		if k == 0 {
 			return 0
 		}
 		panic(fmt.Sprintf("kdtree: index out of range"))
 	}
-	if start == e-1 {
+	if start == end-1 {
 		return k
 	}
 
 	for {
-		if start == e {
+		if start == end {
 			panic("kdtree: internal inconsistency")
 		}
-		sub := list.Slice(start, e)
+		sub := list.Slice(start, end)
 		pivot := Partition(sub, rand.Intn(sub.Len()))
 		switch {
 		case pivot == k:
 			return k
 		case k < pivot:
-			e = pivot + start
+			end = pivot + start
 		default:
 			k -= pivot
 			start += pivot
