@@ -182,6 +182,7 @@ func BenchmarkNewBounds(b *testing.B) {
 }
 
 func BenchmarkInsert(b *testing.B) {
+	rand.Seed(1)
 	t := &Tree{}
 	for i := 0; i < b.N; i++ {
 		t.Insert(Point{rand.Float64(), rand.Float64(), rand.Float64()}, false)
@@ -189,6 +190,7 @@ func BenchmarkInsert(b *testing.B) {
 }
 
 func BenchmarkInsertBounds(b *testing.B) {
+	rand.Seed(1)
 	t := &Tree{}
 	for i := 0; i < b.N; i++ {
 		t.Insert(Point{rand.Float64(), rand.Float64(), rand.Float64()}, true)
