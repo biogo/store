@@ -16,9 +16,19 @@
 package kdtree
 
 import (
+	"flag"
+	"fmt"
 	check "launchpad.net/gocheck"
 	"math/rand"
+	"os"
+	"strings"
 	"testing"
+	"unsafe"
+)
+
+var (
+	genDot   = flag.Bool("dot", false, "Generate dot code for failing trees.")
+	dotLimit = flag.Int("dotmax", 100, "Maximum size for tree output for dot format.")
 )
 
 func Test(t *testing.T) { check.TestingT(t) }
@@ -36,12 +46,60 @@ var (
 			p[i] = Point{rand.Float64(), rand.Float64(), rand.Float64()}
 		}
 		return p
-	}(1e2)
+	}(1e1)
 	bTree = New(bData)
 )
 
 func (s *S) TestNew(c *check.C) {
-	New(wpData)
+	var t *Tree
+	NewTreePanics := func() (panicked bool) {
+		defer func() {
+			if r := recover(); r != nil {
+				panicked = true
+			}
+		}()
+		t = New(wpData)
+		return
+	}
+	c.Check(NewTreePanics(), check.Equals, false)
+	c.Check(t.Root.isKDTree(), check.Equals, true)
+	if c.Failed() && *genDot && t.Len() <= *dotLimit {
+		err := dotFile(t, "TestNew", "")
+		if err != nil {
+			c.Errorf("Dot file write failed: %v", err)
+		}
+	}
+}
+
+type compFn func(float64) bool
+
+func left(v float64) bool  { return v <= 0 }
+func right(v float64) bool { return !left(v) }
+
+func (n *Node) isKDTree() bool {
+	if n == nil {
+		return true
+	}
+	if !n.Left.isPartitioned(n.Point, left, n.Plane) {
+		return false
+	}
+	if !n.Right.isPartitioned(n.Point, right, n.Plane) {
+		return false
+	}
+	return n.Left.isKDTree() && n.Right.isKDTree()
+}
+
+func (n *Node) isPartitioned(pivot Comparable, fn compFn, plane Dim) bool {
+	if n == nil {
+		return true
+	}
+	if n.Left != nil && fn(pivot.Compare(n.Left.Point, plane)) {
+		return false
+	}
+	if n.Right != nil && fn(pivot.Compare(n.Right.Point, plane)) {
+		return false
+	}
+	return n.Left.isPartitioned(pivot, fn, plane) && n.Right.isPartitioned(pivot, fn, plane)
 }
 
 func nearest(q Point, p Points) (Point, float64) {
@@ -93,12 +151,19 @@ func BenchmarkNew(b *testing.B) {
 }
 
 func (s *S) TestBenches(c *check.C) {
-	for i := 0; i < 20; i++ {
+	c.Check(bTree.Root.isKDTree(), check.Equals, true)
+	for i := 0; i < 10; i++ {
 		q := Point{rand.Float64(), rand.Float64(), rand.Float64()}
 		p, d := bTree.Nearest(q)
 		ep, ed := nearest(q, bData)
 		c.Check(p, check.DeepEquals, ep, check.Commentf("Test %d: query %.3f expects %.3f", i, q, ep))
 		c.Check(d, check.Equals, ed)
+	}
+	if c.Failed() && *genDot && bTree.Len() <= *dotLimit {
+		err := dotFile(bTree, "TestBenches", "")
+		if err != nil {
+			c.Errorf("Dot file write failed: %v", err)
+		}
 	}
 }
 
@@ -122,4 +187,54 @@ func BenchmarkNearBrute(b *testing.B) {
 		r, d = nearest(Point{rand.Float64(), rand.Float64(), rand.Float64()}, bData)
 	}
 	_, _ = r, d
+}
+
+func dot(t *Tree, label string) string {
+	if t == nil {
+		return ""
+	}
+	var (
+		s      []string
+		follow func(*Node)
+	)
+	follow = func(n *Node) {
+		id := uintptr(unsafe.Pointer(n))
+		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> %.3f %d/%.3f|<Right>\"];",
+			id, n.Point, n.Plane, n.Point.(Point)[n.Plane])
+		if n.Left != nil {
+			c += fmt.Sprintf("\n\t\tedge [arrowhead=normal]; \"%d\":Left -> \"%d\":Elem;",
+				id, uintptr(unsafe.Pointer(n.Left)))
+			follow(n.Left)
+		}
+		if n.Right != nil {
+			c += fmt.Sprintf("\n\t\tedge [arrowhead=normal]; \"%d\":Right -> \"%d\":Elem;",
+				id, uintptr(unsafe.Pointer(n.Right)))
+			follow(n.Right)
+		}
+		s = append(s, c)
+	}
+	if t.Root != nil {
+		follow(t.Root)
+	}
+	return fmt.Sprintf("digraph %s {\n\tnode [shape=record,height=0.1];\n\t%s\n}\n",
+		label,
+		strings.Join(s, "\n\t"),
+	)
+}
+
+func dotFile(t *Tree, label, dotString string) (err error) {
+	if t == nil && dotString == "" {
+		return
+	}
+	f, err := os.Create(label + ".dot")
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	if dotString == "" {
+		fmt.Fprintf(f, dot(t, label))
+	} else {
+		fmt.Fprintf(f, dotString)
+	}
+	return
 }

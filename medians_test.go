@@ -35,9 +35,25 @@ func (s *S) TestPartition(c *check.C) {
 		for i := range list {
 			list[i] = rand.Int()
 		}
+		pi := Partition(list, rand.Intn(list.Len()))
+		for i := 0; i < pi; i++ {
+			c.Check(list[i] <= list[pi], check.Equals, true)
+		}
+		for i := pi + 1; i < len(list); i++ {
+			c.Check(list[i] > list[pi], check.Equals, true)
+		}
+	}
+}
+
+func (s *S) TestPartitionCollision(c *check.C) {
+	for p := 0; p < 10; p++ {
+		list := make(Ints, 10)
+		for i := range list {
+			list[i] = rand.Intn(5)
+		}
 		pi := Partition(list, p)
 		for i := 0; i < pi; i++ {
-			c.Check(list[i] < list[pi], check.Equals, true)
+			c.Check(list[i] <= list[pi], check.Equals, true)
 		}
 		for i := pi + 1; i < len(list); i++ {
 			c.Check(list[i] > list[pi], check.Equals, true)
@@ -54,7 +70,7 @@ func (s *S) TestSelect(c *check.C) {
 	for k := 0; k < 2121; k++ {
 		list := make(Ints, 2121)
 		for i := range list {
-			list[i] = rand.Int() % 1000
+			list[i] = rand.Intn(1000)
 		}
 		Select(list, k)
 		sorted := append(Ints(nil), list...)
