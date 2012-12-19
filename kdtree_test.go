@@ -76,6 +76,20 @@ func (s *S) TestNew(c *check.C) {
 	}
 }
 
+func (s *S) TestInsert(c *check.C) {
+	t := New(wpData, true)
+	t.Insert(Point{0, 0}, true)
+	t.Insert(Point{10, 10}, true)
+	c.Check(t.Root.isKDTree(), check.Equals, true)
+	c.Check(t.Root.Bounding, check.DeepEquals, &Bounding{Point{0, 0}, Point{10, 10}})
+	if c.Failed() && *genDot && t.Len() <= *dotLimit {
+		err := dotFile(t, "TestInsert", "")
+		if err != nil {
+			c.Errorf("Dot file write failed: %v", err)
+		}
+	}
+}
+
 type compFn func(float64) bool
 
 func left(v float64) bool  { return v <= 0 }
@@ -164,6 +178,20 @@ func BenchmarkNewBounds(b *testing.B) {
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		_ = New(p, true)
+	}
+}
+
+func BenchmarkInsert(b *testing.B) {
+	t := &Tree{}
+	for i := 0; i < b.N; i++ {
+		t.Insert(Point{rand.Float64(), rand.Float64(), rand.Float64()}, false)
+	}
+}
+
+func BenchmarkInsertBounds(b *testing.B) {
+	t := &Tree{}
+	for i := 0; i < b.N; i++ {
+		t.Insert(Point{rand.Float64(), rand.Float64(), rand.Float64()}, true)
 	}
 }
 

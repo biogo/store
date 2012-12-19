@@ -52,6 +52,9 @@ type Dim int
 
 // A Comparable is the element interface for values stored in a k-d tree.
 type Comparable interface {
+	// Clone returns a copy of the Comparable.
+	Clone() Comparable
+
 	// Compare returns a value indicating the sort order relationship between the
 	// receiver and the parameter at the dimension specified.
 	//
@@ -67,6 +70,9 @@ type Comparable interface {
 
 	// Distance resturns the distance between the receiver and the parameter.
 	Distance(Comparable) float64
+
+	// Extend increases the bounding volume to include the point.
+	Extend(*Bounding) *Bounding
 }
 
 // A Bounding represents a volume bounding box.
@@ -89,6 +95,7 @@ func (b *Bounding) Contains(c Comparable) bool {
 // A Point represents a point in a k-d space that satisfies the Comparable interface.
 type Point []float64
 
+func (p Point) Clone() Comparable                   { return append(Point(nil), p...) }
 func (p Point) Compare(c Comparable, d Dim) float64 { q := c.(Point); return p[d] - q[d] }
 func (p Point) Dims() int                           { return len(p) }
 func (p Point) Distance(c Comparable) float64 {
@@ -99,6 +106,19 @@ func (p Point) Distance(c Comparable) float64 {
 		sum += d * d
 	}
 	return sum
+}
+func (p Point) Extend(b *Bounding) *Bounding {
+	if b == nil {
+		b = &Bounding{p.Clone(), p.Clone()}
+	}
+	min := b[0].(Point)
+	max := b[1].(Point)
+	for d, v := range p {
+		min[d] = math.Min(min[d], v)
+		max[d] = math.Max(max[d], v)
+	}
+	*b = Bounding{min, max}
+	return b
 }
 
 // A Points is a collection of point values that satisfies the Interface.
@@ -186,6 +206,41 @@ func build(p Interface, plane Dim, bounding bool) *Node {
 		Right:    build(p.Slice(piv+1, p.Len()), np, bounding),
 		Bounding: b,
 	}
+}
+
+// Insert add a point to the tree, updating the bounding volumes if bounding is true and
+// the tree is empty or the tree already has bounding volumes stored. No rebalancing of the
+// tree is performed.
+func (t *Tree) Insert(c Comparable, bounding bool) {
+	t.Count++
+	if t.Root != nil {
+		bounding = t.Root.Bounding != nil
+	}
+	t.Root = t.Root.insert(c, 0, bounding)
+}
+
+func (n *Node) insert(c Comparable, d Dim, bounding bool) *Node {
+	if n == nil {
+		var b *Bounding
+		if bounding {
+			b = &Bounding{c.Clone(), c.Clone()}
+		}
+		return &Node{
+			Point:    c,
+			Plane:    d,
+			Bounding: b,
+		}
+	}
+
+	n.Bounding = c.Extend(n.Bounding)
+	d = (n.Plane + 1) % Dim(c.Dims())
+	if c.Compare(n.Point, n.Plane) <= 0 {
+		n.Left = n.Left.insert(c, d, bounding)
+	} else {
+		n.Right = n.Right.insert(c, d, bounding)
+	}
+
+	return n
 }
 
 // Len returns the number of elements in the tree.
