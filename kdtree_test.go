@@ -46,7 +46,7 @@ var (
 			p[i] = Point{rand.Float64(), rand.Float64(), rand.Float64()}
 		}
 		return p
-	}(1e1)
+	}(1e2)
 	bTree = New(bData)
 )
 
@@ -152,7 +152,7 @@ func BenchmarkNew(b *testing.B) {
 
 func (s *S) TestBenches(c *check.C) {
 	c.Check(bTree.Root.isKDTree(), check.Equals, true)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1e3; i++ {
 		q := Point{rand.Float64(), rand.Float64(), rand.Float64()}
 		p, d := bTree.Nearest(q)
 		ep, ed := nearest(q, bData)
@@ -199,8 +199,8 @@ func dot(t *Tree, label string) string {
 	)
 	follow = func(n *Node) {
 		id := uintptr(unsafe.Pointer(n))
-		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> %.3f %d/%.3f|<Right>\"];",
-			id, n.Point, n.Plane, n.Point.(Point)[n.Plane])
+		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> %s/%.3f|<Right>\"];",
+			id, n, n.Point.(Point)[n.Plane])
 		if n.Left != nil {
 			c += fmt.Sprintf("\n\t\tedge [arrowhead=normal]; \"%d\":Left -> \"%d\":Elem;",
 				id, uintptr(unsafe.Pointer(n.Left)))

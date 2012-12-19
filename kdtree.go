@@ -17,6 +17,7 @@
 package kdtree
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -101,6 +102,13 @@ type Node struct {
 	Left, Right *Node
 }
 
+func (n *Node) String() string {
+	if n == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("%.3f %d", n.Point, n.Plane)
+}
+
 // A Tree implements a k-d tree creation and nearest neighbour search.
 type Tree struct {
 	Root  *Node
@@ -153,45 +161,44 @@ func (n *Node) search(q Comparable, d Dim, dist float64) (*Node, float64) {
 	if n == nil {
 		return nil, inf
 	}
+
 	c := q.Compare(n.Point, d)
 	dist = math.Min(dist, q.Distance(n.Point))
 	d = (d + 1) % Dim(q.Dims())
-	switch {
-	case c < 0:
-		rn, rd := n.Left.search(q, d, dist)
-		if rd < dist {
-			n, dist = rn, rd
+
+	var bn = n
+	if c <= 0 {
+		ln, ld := n.Left.search(q, d, dist)
+		if ld < dist {
+			dist = ld
+			bn = ln
 		}
 		if c*c <= dist {
 			rn, rd := n.Right.search(q, d, dist)
 			if rd < dist {
-				n, dist = rn, rd
+				bn, dist = rn, rd
 			}
 		}
-	case c > 0:
-		rn, rd := n.Right.search(q, d, dist)
-		if rd < dist {
-			n, dist = rn, rd
+		if ld < dist {
+			dist = ld
+			bn = ln
 		}
-		if c*c <= dist {
-			rn, rd := n.Left.search(q, d, dist)
-			if rd < dist {
-				n, dist = rn, rd
-			}
-		}
-	default:
-		var (
-			rn *Node
-			rd float64
-		)
-		rn, rd = n.Left.search(q, d, dist)
-		if rd < dist {
-			n, dist = rn, rd
-		}
-		rn, rd = n.Right.search(q, d, dist)
-		if rd < dist {
-			n, dist = rn, rd
+		return bn, dist
+	}
+	rn, rd := n.Right.search(q, d, dist)
+	if rd < dist {
+		dist = rd
+		bn = rn
+	}
+	if c*c <= dist {
+		ln, ld := n.Left.search(q, d, dist)
+		if ld < dist {
+			bn, dist = ln, ld
 		}
 	}
-	return n, dist
+	if rd < dist {
+		dist = rd
+		bn = rn
+	}
+	return bn, dist
 }
