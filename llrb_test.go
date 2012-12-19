@@ -52,7 +52,7 @@ func (n *Node) isBST(min, max Comparable) bool {
 	if n.Elem.Compare(min) < 0 || n.Elem.Compare(max) > 0 {
 		return false
 	}
-	return n.Left.isBST(min, n.Elem) || n.Right.isBST(n.Elem, max)
+	return n.Left.isBST(min, n.Elem) && n.Right.isBST(n.Elem, max)
 }
 
 // Test BU and TD234 invariants.
