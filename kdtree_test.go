@@ -39,15 +39,16 @@ var _ = check.Suite(&S{})
 
 var (
 	// Using example from WP article.
-	wpData = Points{{2, 3}, {5, 4}, {9, 6}, {4, 7}, {8, 1}, {7, 2}}
-	bData  = func(i int) Points {
+	wpData  = Points{{2, 3}, {5, 4}, {9, 6}, {4, 7}, {8, 1}, {7, 2}}
+	wpBound = &Bounding{Point{2, 1}, Point{9, 7}}
+	bData   = func(i int) Points {
 		p := make(Points, i)
 		for i := range p {
 			p[i] = Point{rand.Float64(), rand.Float64(), rand.Float64()}
 		}
 		return p
 	}(1e2)
-	bTree = New(bData)
+	bTree = New(bData, true)
 )
 
 func (s *S) TestNew(c *check.C) {
@@ -58,11 +59,15 @@ func (s *S) TestNew(c *check.C) {
 				panicked = true
 			}
 		}()
-		t = New(wpData)
+		t = New(wpData, true)
 		return
 	}
 	c.Check(NewTreePanics(), check.Equals, false)
 	c.Check(t.Root.isKDTree(), check.Equals, true)
+	for _, p := range wpData {
+		c.Check(t.Contains(p), check.Equals, true)
+	}
+	c.Check(t.Root.Bounding, check.DeepEquals, wpBound)
 	if c.Failed() && *genDot && t.Len() <= *dotLimit {
 		err := dotFile(t, "TestNew", "")
 		if err != nil {
@@ -116,7 +121,7 @@ func nearest(q Point, p Points) (Point, float64) {
 }
 
 func (s *S) TestNearest(c *check.C) {
-	t := New(wpData)
+	t := New(wpData, false)
 	for i, q := range append([]Point{
 		{4, 6},
 		{7, 5},
@@ -146,7 +151,19 @@ func BenchmarkNew(b *testing.B) {
 	}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_ = New(p)
+		_ = New(p, false)
+	}
+}
+
+func BenchmarkNewBounds(b *testing.B) {
+	b.StopTimer()
+	p := make(Points, 1e5)
+	for i := range p {
+		p[i] = Point{rand.Float64(), rand.Float64(), rand.Float64()}
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		_ = New(p, true)
 	}
 }
 
@@ -199,8 +216,8 @@ func dot(t *Tree, label string) string {
 	)
 	follow = func(n *Node) {
 		id := uintptr(unsafe.Pointer(n))
-		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> %s/%.3f|<Right>\"];",
-			id, n, n.Point.(Point)[n.Plane])
+		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> %s/%.3f\\n%.3f|<Right>\"];",
+			id, n, n.Point.(Point)[n.Plane], *n.Bounding)
 		if n.Left != nil {
 			c += fmt.Sprintf("\n\t\tedge [arrowhead=normal]; \"%d\":Left -> \"%d\":Elem;",
 				id, uintptr(unsafe.Pointer(n.Left)))

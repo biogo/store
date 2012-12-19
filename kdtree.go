@@ -31,9 +31,19 @@ var (
 )
 
 type Interface interface {
-	Index(int) Comparable
+	// Bounds returns a bounding on the list of point.
+	Bounds() *Bounding
+
+	// Index returns the ith element of the list of points.
+	Index(i int) Comparable
+
+	// Len returns the length of the list.
 	Len() int
+
+	// Pivot partitions the list based on the dimension specified.
 	Pivot(Dim) int
+
+	// Slice returns a slice of the list.
 	Slice(start, end int) Interface
 }
 
@@ -59,6 +69,23 @@ type Comparable interface {
 	Distance(Comparable) float64
 }
 
+// A Bounding represents a volume bounding box.
+type Bounding [2]Comparable
+
+// Contains returns whether c is within the volume of the Bounding. A nil Bounding
+// returns true.
+func (b *Bounding) Contains(c Comparable) bool {
+	if b == nil {
+		return true
+	}
+	for d := Dim(0); d < Dim(c.Dims()); d++ {
+		if c.Compare(b[0], d) < 0 || c.Compare(b[1], d) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // A Point represents a point in a k-d space that satisfies the Comparable interface.
 type Point []float64
 
@@ -77,6 +104,20 @@ func (p Point) Distance(c Comparable) float64 {
 // A Points is a collection of point values that satisfies the Interface.
 type Points []Point
 
+func (p Points) Bounds() *Bounding {
+	if p.Len() == 0 {
+		return nil
+	}
+	min := append(Point(nil), p[0]...)
+	max := append(Point(nil), p[0]...)
+	for _, e := range p[1:] {
+		for d, v := range e {
+			min[d] = math.Min(min[d], v)
+			max[d] = math.Max(max[d], v)
+		}
+	}
+	return &Bounding{min, max}
+}
 func (p Points) Index(i int) Comparable         { return p[i] }
 func (p Points) Len() int                       { return len(p) }
 func (p Points) Pivot(d Dim) int                { return Plane{Points: p, Dim: d}.Pivot() }
@@ -100,6 +141,7 @@ type Node struct {
 	Point       Comparable
 	Plane       Dim
 	Left, Right *Node
+	*Bounding
 }
 
 func (n *Node) String() string {
@@ -115,15 +157,16 @@ type Tree struct {
 	Count int
 }
 
-// New returns a k-d tree constructed from the values in p.
-func New(p Interface) *Tree {
+// New returns a k-d tree constructed from the values in p. If bounding is true, bounds
+// are determined for each node.
+func New(p Interface, bounding bool) *Tree {
 	return &Tree{
-		Root:  build(p, 0),
+		Root:  build(p, 0, bounding),
 		Count: p.Len(),
 	}
 }
 
-func build(p Interface, plane Dim) *Node {
+func build(p Interface, plane Dim, bounding bool) *Node {
 	if p.Len() == 0 {
 		return nil
 	}
@@ -132,16 +175,30 @@ func build(p Interface, plane Dim) *Node {
 	d := p.Index(piv)
 	np := (plane + 1) % Dim(d.Dims())
 
+	var b *Bounding
+	if bounding {
+		b = p.Bounds()
+	}
 	return &Node{
-		Point: d,
-		Plane: plane,
-		Left:  build(p.Slice(0, piv), np),
-		Right: build(p.Slice(piv+1, p.Len()), np),
+		Point:    d,
+		Plane:    plane,
+		Left:     build(p.Slice(0, piv), np, bounding),
+		Right:    build(p.Slice(piv+1, p.Len()), np, bounding),
+		Bounding: b,
 	}
 }
 
 // Len returns the number of elements in the tree.
 func (t *Tree) Len() int { return t.Count }
+
+// Contains returns whether a Comparable is in the bounds of the tree. If no bounding has
+// been contructed Contains returns true.
+func (t *Tree) Contains(c Comparable) bool {
+	if t.Root.Bounding == nil {
+		return true
+	}
+	return t.Root.Contains(c)
+}
 
 var inf = math.Inf(1)
 
