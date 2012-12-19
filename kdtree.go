@@ -166,7 +166,7 @@ func (n *Node) search(q Comparable, d Dim, dist float64) (*Node, float64) {
 	dist = math.Min(dist, q.Distance(n.Point))
 	d = (d + 1) % Dim(q.Dims())
 
-	var bn = n
+	bn := n
 	if c <= 0 {
 		ln, ld := n.Left.search(q, d, dist)
 		if ld < dist {
@@ -178,10 +178,6 @@ func (n *Node) search(q Comparable, d Dim, dist float64) (*Node, float64) {
 			if rd < dist {
 				bn, dist = rn, rd
 			}
-		}
-		if ld < dist {
-			dist = ld
-			bn = ln
 		}
 		return bn, dist
 	}
@@ -195,10 +191,6 @@ func (n *Node) search(q Comparable, d Dim, dist float64) (*Node, float64) {
 		if ld < dist {
 			bn, dist = ln, ld
 		}
-	}
-	if rd < dist {
-		dist = rd
-		bn = rn
 	}
 	return bn, dist
 }
