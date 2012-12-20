@@ -39,9 +39,10 @@ var _ = check.Suite(&S{})
 
 var (
 	// Using example from WP article.
-	wpData  = Points{{2, 3}, {5, 4}, {9, 6}, {4, 7}, {8, 1}, {7, 2}}
-	wpBound = &Bounding{Point{2, 1}, Point{9, 7}}
-	bData   = func(i int) Points {
+	wpData   = Points{{2, 3}, {5, 4}, {9, 6}, {4, 7}, {8, 1}, {7, 2}}
+	nbWpData = nbPoints{{2, 3}, {5, 4}, {9, 6}, {4, 7}, {8, 1}, {7, 2}}
+	wpBound  = &Bounding{Point{2, 1}, Point{9, 7}}
+	bData    = func(i int) Points {
 		p := make(Points, i)
 		for i := range p {
 			p[i] = Point{rand.Float64(), rand.Float64(), rand.Float64()}
@@ -52,40 +53,78 @@ var (
 )
 
 func (s *S) TestNew(c *check.C) {
-	var t *Tree
-	NewTreePanics := func() (panicked bool) {
-		defer func() {
-			if r := recover(); r != nil {
-				panicked = true
+	for i, test := range []struct {
+		data     Interface
+		bounding bool
+		bounds   *Bounding
+	}{
+		{wpData, false, nil},
+		{nbWpData, false, nil},
+		{wpData, true, wpBound},
+		{nbWpData, true, nil},
+	} {
+		var t *Tree
+		NewTreePanics := func() (panicked bool) {
+			defer func() {
+				if r := recover(); r != nil {
+					panicked = true
+				}
+			}()
+			t = New(test.data, test.bounding)
+			return
+		}
+		c.Check(NewTreePanics(), check.Equals, false)
+		c.Check(t.Root.isKDTree(), check.Equals, true)
+		switch data := test.data.(type) {
+		case Points:
+			for _, p := range data {
+				c.Check(t.Contains(p), check.Equals, true)
 			}
-		}()
-		t = New(wpData, true)
-		return
-	}
-	c.Check(NewTreePanics(), check.Equals, false)
-	c.Check(t.Root.isKDTree(), check.Equals, true)
-	for _, p := range wpData {
-		c.Check(t.Contains(p), check.Equals, true)
-	}
-	c.Check(t.Root.Bounding, check.DeepEquals, wpBound)
-	if c.Failed() && *genDot && t.Len() <= *dotLimit {
-		err := dotFile(t, "TestNew", "")
-		if err != nil {
-			c.Errorf("Dot file write failed: %v", err)
+		case nbPoints:
+			for _, p := range data {
+				c.Check(t.Contains(p), check.Equals, true)
+			}
+		}
+		c.Check(t.Root.Bounding, check.DeepEquals, test.bounds,
+			check.Commentf("Test %d. %T %v", i, test.data, test.bounding))
+		if c.Failed() && *genDot && t.Len() <= *dotLimit {
+			err := dotFile(t, fmt.Sprintf("TestNew%T", test.data), "")
+			if err != nil {
+				c.Errorf("Dot file write failed: %v", err)
+			}
 		}
 	}
 }
 
 func (s *S) TestInsert(c *check.C) {
-	t := New(wpData, true)
-	t.Insert(Point{0, 0}, true)
-	t.Insert(Point{10, 10}, true)
-	c.Check(t.Root.isKDTree(), check.Equals, true)
-	c.Check(t.Root.Bounding, check.DeepEquals, &Bounding{Point{0, 0}, Point{10, 10}})
-	if c.Failed() && *genDot && t.Len() <= *dotLimit {
-		err := dotFile(t, "TestInsert", "")
-		if err != nil {
-			c.Errorf("Dot file write failed: %v", err)
+	for i, test := range []struct {
+		data   Interface
+		insert []Comparable
+		bounds *Bounding
+	}{
+		{
+			wpData,
+			[]Comparable{Point{0, 0}, Point{10, 10}},
+			&Bounding{Point{0, 0}, Point{10, 10}},
+		},
+		{
+			nbWpData,
+			[]Comparable{nbPoint{0, 0}, nbPoint{10, 10}},
+			nil,
+		},
+	} {
+		t := New(test.data, true)
+		for _, v := range test.insert {
+			t.Insert(v, true)
+		}
+		c.Check(t.Root.isKDTree(), check.Equals, true)
+		c.Check(t.Root.Bounding, check.DeepEquals, test.bounds,
+			check.Commentf("Test %d. %T", i, test.data))
+		if c.Failed() && *genDot && t.Len() <= *dotLimit {
+			err := dotFile(t, fmt.Sprintf("TestInsert%T", test.data), "")
+			if err != nil {
+				c.Errorf("Dot file write failed: %v", err)
+			}
 		}
 	}
 }

@@ -22,9 +22,6 @@ import (
 )
 
 type Interface interface {
-	// Bounds returns a bounding on the list of point.
-	Bounds() *Bounding
-
 	// Index returns the ith element of the list of points.
 	Index(i int) Comparable
 
@@ -36,6 +33,16 @@ type Interface interface {
 
 	// Slice returns a slice of the list.
 	Slice(start, end int) Interface
+}
+
+// An Bounder returns a bounding volume containing the list of points. Bounds may return nil.
+type Bounder interface {
+	Bounds() *Bounding
+}
+
+type bounder interface {
+	Interface
+	Bounder
 }
 
 // A Dim is an index into a point's coordinates.
@@ -61,9 +68,16 @@ type Comparable interface {
 
 	// Distance resturns the distance between the receiver and the parameter.
 	Distance(Comparable) float64
+}
 
-	// Extend increases the bounding volume to include the point. Extend may return nil.
+// An Extender can increase a bounding volume to include the point. Extend may return nil.
+type Extender interface {
 	Extend(*Bounding) *Bounding
+}
+
+type extender interface {
+	Comparable
+	Extender
 }
 
 // A Bounding represents a volume bounding box.
@@ -104,16 +118,40 @@ type Tree struct {
 	Count int
 }
 
-// New returns a k-d tree constructed from the values in p. If bounding is true, bounds
-// are determined for each node.
+// New returns a k-d tree constructed from the values in p. If p is a Bounder and
+// bounding is true, bounds are determined for each node.
 func New(p Interface, bounding bool) *Tree {
+	if p, ok := p.(bounder); ok && bounding {
+		return &Tree{
+			Root:  buildBounded(p, 0, bounding),
+			Count: p.Len(),
+		}
+	}
 	return &Tree{
-		Root:  build(p, 0, bounding),
+		Root:  build(p, 0),
 		Count: p.Len(),
 	}
 }
 
-func build(p Interface, plane Dim, bounding bool) *Node {
+func build(p Interface, plane Dim) *Node {
+	if p.Len() == 0 {
+		return nil
+	}
+
+	piv := p.Pivot(plane)
+	d := p.Index(piv)
+	np := (plane + 1) % Dim(d.Dims())
+
+	return &Node{
+		Point:    d,
+		Plane:    plane,
+		Left:     build(p.Slice(0, piv), np),
+		Right:    build(p.Slice(piv+1, p.Len()), np),
+		Bounding: nil,
+	}
+}
+
+func buildBounded(p bounder, plane Dim, bounding bool) *Node {
 	if p.Len() == 0 {
 		return nil
 	}
@@ -129,24 +167,50 @@ func build(p Interface, plane Dim, bounding bool) *Node {
 	return &Node{
 		Point:    d,
 		Plane:    plane,
-		Left:     build(p.Slice(0, piv), np, bounding),
-		Right:    build(p.Slice(piv+1, p.Len()), np, bounding),
+		Left:     buildBounded(p.Slice(0, piv).(bounder), np, bounding),
+		Right:    buildBounded(p.Slice(piv+1, p.Len()).(bounder), np, bounding),
 		Bounding: b,
 	}
 }
 
-// Insert add a point to the tree, updating the bounding volumes if bounding is true and
-// the tree is empty or the tree already has bounding volumes stored. No rebalancing of the
-// tree is performed.
+// Insert adds a point to the tree, updating the bounding volumes if bounding is
+// true, and the tree is empty or the tree already has bounding volumes stored,
+// and c is an Extender. No rebalancing of the tree is performed.
 func (t *Tree) Insert(c Comparable, bounding bool) {
 	t.Count++
 	if t.Root != nil {
 		bounding = t.Root.Bounding != nil
 	}
-	t.Root = t.Root.insert(c, 0, bounding)
+	if c, ok := c.(extender); ok && bounding {
+		t.Root = t.Root.insertBounded(c, 0, bounding)
+		return
+	} else if !ok && t.Root != nil {
+		// If we are not rebounding, mark the tree as non-bounded.
+		t.Root.Bounding = nil
+	}
+	t.Root = t.Root.insert(c, 0)
 }
 
-func (n *Node) insert(c Comparable, d Dim, bounding bool) *Node {
+func (n *Node) insert(c Comparable, d Dim) *Node {
+	if n == nil {
+		return &Node{
+			Point:    c,
+			Plane:    d,
+			Bounding: nil,
+		}
+	}
+
+	d = (n.Plane + 1) % Dim(c.Dims())
+	if c.Compare(n.Point, n.Plane) <= 0 {
+		n.Left = n.Left.insert(c, d)
+	} else {
+		n.Right = n.Right.insert(c, d)
+	}
+
+	return n
+}
+
+func (n *Node) insertBounded(c extender, d Dim, bounding bool) *Node {
 	if n == nil {
 		var b *Bounding
 		if bounding {
@@ -159,12 +223,14 @@ func (n *Node) insert(c Comparable, d Dim, bounding bool) *Node {
 		}
 	}
 
-	n.Bounding = c.Extend(n.Bounding)
+	if bounding {
+		n.Bounding = c.Extend(n.Bounding)
+	}
 	d = (n.Plane + 1) % Dim(c.Dims())
 	if c.Compare(n.Point, n.Plane) <= 0 {
-		n.Left = n.Left.insert(c, d, bounding)
+		n.Left = n.Left.insertBounded(c, d, bounding)
 	} else {
-		n.Right = n.Right.insert(c, d, bounding)
+		n.Right = n.Right.insertBounded(c, d, bounding)
 	}
 
 	return n
