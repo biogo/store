@@ -138,6 +138,10 @@ func (n *Node) isKDTree() bool {
 	if n == nil {
 		return true
 	}
+	d := n.Point.Dims()
+	if !(n.isContainedBy(n.Bounding) && n.boundingIsMinimal(n.Bounding, [2][]bool{make([]bool, d), make([]bool, d)})) {
+		return false
+	}
 	if !n.Left.isPartitioned(n.Point, left, n.Plane) {
 		return false
 	}
@@ -158,6 +162,43 @@ func (n *Node) isPartitioned(pivot Comparable, fn compFn, plane Dim) bool {
 		return false
 	}
 	return n.Left.isPartitioned(pivot, fn, plane) && n.Right.isPartitioned(pivot, fn, plane)
+}
+
+func (n *Node) isContainedBy(b *Bounding) bool {
+	if n == nil {
+		return true
+	}
+	if !b.Contains(n.Point) {
+		return false
+	}
+	return n.Left.isContainedBy(b) && n.Right.isContainedBy(b)
+}
+
+// This is inaccurately named unless used in conjunction with isContainedBy.
+// boundingIsMinimal returns true for a *Node if all the planes of the *Bounding
+// coincide with at least one point in its children. tight should be initialied
+// such that the slices have length equal to the dimensionality of the points.
+func (n *Node) boundingIsMinimal(b *Bounding, tight [2][]bool) bool {
+	if b == nil {
+		return true
+	}
+	if n == nil {
+		return true
+	}
+
+	n.Left.boundingIsMinimal(b, tight)
+	n.Right.boundingIsMinimal(b, tight)
+
+	var ok = true
+	for i := range tight {
+		for d := 0; d < n.Point.Dims(); d++ {
+			if c := n.Point.Compare(b[0], Dim(d)); c == 0 {
+				tight[i][d] = true
+			}
+			ok = ok && tight[i][d]
+		}
+	}
+	return ok
 }
 
 func nearest(q Point, p Points) (Point, float64) {
