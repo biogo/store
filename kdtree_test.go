@@ -128,7 +128,8 @@ func (n *Node) isKDTree() bool {
 		return true
 	}
 	d := n.Point.Dims()
-	if !(n.isContainedBy(n.Bounding) && n.boundingIsMinimal(n.Bounding, [2][]bool{make([]bool, d), make([]bool, d)})) {
+	// Together these define the property of minimal orthogonal bounding.
+	if !(n.isContainedBy(n.Bounding) && n.Bounding.planesHaveCoincidentPointsIn(n, [2][]bool{make([]bool, d), make([]bool, d)})) {
 		return false
 	}
 	if !n.Left.isPartitioned(n.Point, left, n.Plane) {
@@ -163,11 +164,7 @@ func (n *Node) isContainedBy(b *Bounding) bool {
 	return n.Left.isContainedBy(b) && n.Right.isContainedBy(b)
 }
 
-// This is inaccurately named unless used in conjunction with isContainedBy.
-// boundingIsMinimal returns true for a *Node if all the planes of the *Bounding
-// coincide with at least one point in its children. tight should be initialied
-// such that the slices have length equal to the dimensionality of the points.
-func (n *Node) boundingIsMinimal(b *Bounding, tight [2][]bool) bool {
+func (b *Bounding) planesHaveCoincidentPointsIn(n *Node, tight [2][]bool) bool {
 	if b == nil {
 		return true
 	}
@@ -175,8 +172,8 @@ func (n *Node) boundingIsMinimal(b *Bounding, tight [2][]bool) bool {
 		return true
 	}
 
-	n.Left.boundingIsMinimal(b, tight)
-	n.Right.boundingIsMinimal(b, tight)
+	b.planesHaveCoincidentPointsIn(n.Left, tight)
+	b.planesHaveCoincidentPointsIn(n.Right, tight)
 
 	var ok = true
 	for i := range tight {

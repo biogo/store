@@ -42,20 +42,19 @@ type Comparable interface {
 	// Clone returns a copy of the Comparable.
 	Clone() Comparable
 
-	// Compare returns a value indicating the sort order relationship between the
-	// receiver and the parameter at the dimension specified.
+	// Compare returns the shortest translation of the plane through b with
+	// normal vector along dimension d to the parallel plane through a.
 	//
 	// Given c = a.Compare(b, d):
-	//  c < 0 if a_d < b_d ;
-	//  c == 0 if a_d == b_d; and
-	//  c > 0 if a_d > b_d.
+	//  c = a_d - b_d
 	//
 	Compare(Comparable, Dim) float64
 
 	// Dims returns the number of dimensions described in the Comparable.
 	Dims() int
 
-	// Distance resturns the distance between the receiver and the parameter.
+	// Distance returns the squared Euclidian distance between the receiver and
+	// the parameter.
 	Distance(Comparable) float64
 }
 
@@ -229,7 +228,7 @@ func (n *Node) insertBounded(c extender, d Dim, bounding bool) *Node {
 func (t *Tree) Len() int { return t.Count }
 
 // Contains returns whether a Comparable is in the bounds of the tree. If no bounding has
-// been contructed Contains returns true.
+// been constructed Contains returns true.
 func (t *Tree) Contains(c Comparable) bool {
 	if t.Root.Bounding == nil {
 		return true
