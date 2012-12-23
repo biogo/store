@@ -490,22 +490,18 @@ func (n *Node) doReverse(fn Operation) (done bool) {
 	return
 }
 
-// DoRange performs fn on all values stored in the tree over the interval [from, to) from left
-// to right. If to equals from the call is a no-op, and if to is less than from DoRange will
-// panic. A boolean is returned indicating whether the Do traversal was interrupted by an
-// Operation returning true. If fn alters stored values' sort relationships future tree
-// operation behaviors are undefined.
+// DoRange performs fn on all values stored in the tree over the interval [from, to] from left
+// to right. If to is less than from DoRange will panic. A boolean is returned indicating whether
+// the Do traversal was interrupted by an Operation returning true. If fn alters stored values'
+// sort relationships future tree operation behaviors are undefined.
 func (t *Tree) DoRange(fn Operation, from, to Comparable) bool {
 	if t.Root == nil {
 		return false
 	}
-	switch order := from.Compare(to); {
-	case order < 0:
-		return t.Root.doRange(fn, from, to)
-	case order > 0:
+	if from.Compare(to) > 0 {
 		panic("llrb: inverted range")
 	}
-	return false
+	return t.Root.doRange(fn, from, to)
 }
 
 func (n *Node) doRange(fn Operation, lo, hi Comparable) (done bool) {
@@ -528,22 +524,18 @@ func (n *Node) doRange(fn Operation, lo, hi Comparable) (done bool) {
 	return
 }
 
-// DoRangeReverse performs fn on all values stored in the tree over the interval [to, from) from
-// right to left. If from equals to the call is a no-op, and if from is less than to DoRange will
-// panic. A boolean is returned indicating whether the Do traversal was interrupted by an Operation
-// returning true. If fn alters stored values' sort relationships future tree operation behaviors
-// are undefined.
+// DoRangeReverse performs fn on all values stored in the tree over the interval [to, from] from
+// right to left. If from is less than to DoRange will panic. A boolean is returned indicating
+// whether the Do traversal was interrupted by an Operation returning true. If fn alters stored
+// values' sort relationships future tree operation behaviors are undefined.
 func (t *Tree) DoRangeReverse(fn Operation, from, to Comparable) bool {
 	if t.Root == nil {
 		return false
 	}
-	switch order := from.Compare(to); {
-	case order > 0:
-		return t.Root.doRangeReverse(fn, from, to)
-	case order < 0:
+	if from.Compare(to) < 0 {
 		panic("llrb: inverted range")
 	}
-	return false
+	return t.Root.doRangeReverse(fn, from, to)
 }
 
 func (n *Node) doRangeReverse(fn Operation, hi, lo Comparable) (done bool) {
