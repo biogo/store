@@ -287,3 +287,70 @@ func (n *Node) search(q Comparable, d Dim, dist float64) (*Node, float64) {
 	}
 	return bn, dist
 }
+
+// An Operation is a function that operates on a Comparable. The bounding volume and tree depth
+// of the point is also provided. If done is returned true, the Operation is indicating that no
+// further work needs to be done and so the Do function should traverse no further.
+type Operation func(Comparable, *Bounding, int) (done bool)
+
+// Do performs fn on all values stored in the tree. A boolean is returned indicating whether the
+// Do traversal was interrupted by an Operation returning true. If fn alters stored values' sort
+// relationships, future tree operation behaviors are undefined.
+func (t *Tree) Do(fn Operation) bool {
+	if t.Root == nil {
+		return false
+	}
+	return t.Root.do(fn, 0)
+}
+
+func (n *Node) do(fn Operation, depth int) (done bool) {
+	if n.Left != nil {
+		done = n.Left.do(fn, depth+1)
+		if done {
+			return
+		}
+	}
+	done = fn(n.Point, n.Bounding, depth)
+	if done {
+		return
+	}
+	if n.Right != nil {
+		done = n.Right.do(fn, depth+1)
+	}
+	return
+}
+
+// DoBounded performs fn on all values stored in the tree that are within the specified bound.
+// If b is nil, the result is the same as a Do. A boolean is returned indicating whether the
+// DoBounded traversal was interrupted by an Operation returning true. If fn alters stored
+// values' sort relationships future tree operation behaviors are undefined.
+func (t *Tree) DoBounded(fn Operation, b *Bounding) bool {
+	if t.Root == nil {
+		return false
+	}
+	if b == nil {
+		return t.Root.do(fn, 0)
+	}
+	return t.Root.doBounded(fn, b, 0)
+}
+
+func (n *Node) doBounded(fn Operation, b *Bounding, depth int) (done bool) {
+	d := Dim(depth % b[0].Dims())
+	lc, hc := b[0].Compare(n.Point, d), b[1].Compare(n.Point, d)
+	if lc <= 0 && n.Left != nil {
+		done = n.Left.doBounded(fn, b, depth+1)
+		if done {
+			return
+		}
+	}
+	if b.Contains(n.Point) {
+		done = fn(n.Point, b, depth)
+		if done {
+			return
+		}
+	}
+	if hc > 0 && n.Right != nil {
+		done = n.Right.doBounded(fn, b, depth+1)
+	}
+	return
+}

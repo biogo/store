@@ -223,6 +223,60 @@ func (s *S) TestNearest(c *check.C) {
 	}
 }
 
+func (s *S) TestDo(c *check.C) {
+	var result Points
+	t := New(wpData, false)
+	f := func(c Comparable, _ *Bounding, _ int) (done bool) {
+		result = append(result, c.(Point))
+		return
+	}
+	killed := t.Do(f)
+	c.Check(result, check.DeepEquals, wpData)
+	c.Check(killed, check.Equals, false)
+}
+
+func (s *S) TestDoBounded(c *check.C) {
+	for _, test := range []struct {
+		bounds *Bounding
+		result Points
+	}{
+		{
+			nil,
+			wpData,
+		},
+		{
+			&Bounding{Point{0, 0}, Point{10, 10}},
+			wpData,
+		},
+		{
+			&Bounding{Point{3, 4}, Point{10, 10}},
+			Points{Point{5, 4}, Point{4, 7}, Point{9, 6}},
+		},
+		{
+			&Bounding{Point{3, 3}, Point{10, 10}},
+			Points{Point{5, 4}, Point{4, 7}, Point{9, 6}},
+		},
+		{
+			&Bounding{Point{0, 0}, Point{6, 5}},
+			Points{Point{2, 3}, Point{5, 4}},
+		},
+		{
+			&Bounding{Point{5, 2}, Point{7, 4}},
+			Points{Point{5, 4}, Point{7, 2}},
+		},
+	} {
+		var result Points
+		t := New(wpData, false)
+		f := func(c Comparable, _ *Bounding, _ int) (done bool) {
+			result = append(result, c.(Point))
+			return
+		}
+		killed := t.DoBounded(f, test.bounds)
+		c.Check(result, check.DeepEquals, test.result)
+		c.Check(killed, check.Equals, false)
+	}
+}
+
 func BenchmarkNew(b *testing.B) {
 	b.StopTimer()
 	p := make(Points, 1e5)
