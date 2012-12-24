@@ -264,6 +264,18 @@ func (s *S) TestDoBounded(c *check.C) {
 			&Bounding{Point{5, 2}, Point{7, 4}},
 			Points{Point{5, 4}, Point{7, 2}},
 		},
+		{
+			&Bounding{Point{2, 2}, Point{7, 4}},
+			Points{Point{2, 3}, Point{5, 4}, Point{7, 2}},
+		},
+		{
+			&Bounding{Point{2, 3}, Point{9, 6}},
+			Points{Point{2, 3}, Point{5, 4}, Point{9, 6}},
+		},
+		{
+			&Bounding{Point{7, 2}, Point{7, 2}},
+			Points{Point{7, 2}},
+		},
 	} {
 		var result Points
 		t := New(wpData, false)

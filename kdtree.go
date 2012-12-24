@@ -243,44 +243,43 @@ func (t *Tree) Nearest(q Comparable) (Comparable, float64) {
 	if t.Root == nil {
 		return nil, inf
 	}
-	n, dist := t.Root.search(q, 0, inf)
+	n, dist := t.Root.search(q, inf)
 	if n == nil {
 		return nil, inf
 	}
 	return n.Point, dist
 }
 
-func (n *Node) search(q Comparable, d Dim, dist float64) (*Node, float64) {
+func (n *Node) search(q Comparable, dist float64) (*Node, float64) {
 	if n == nil {
 		return nil, inf
 	}
 
-	c := q.Compare(n.Point, d)
+	c := q.Compare(n.Point, n.Plane)
 	dist = math.Min(dist, q.Distance(n.Point))
-	d = (d + 1) % Dim(q.Dims())
 
 	bn := n
 	if c <= 0 {
-		ln, ld := n.Left.search(q, d, dist)
+		ln, ld := n.Left.search(q, dist)
 		if ld < dist {
 			dist = ld
 			bn = ln
 		}
 		if c*c <= dist {
-			rn, rd := n.Right.search(q, d, dist)
+			rn, rd := n.Right.search(q, dist)
 			if rd < dist {
 				bn, dist = rn, rd
 			}
 		}
 		return bn, dist
 	}
-	rn, rd := n.Right.search(q, d, dist)
+	rn, rd := n.Right.search(q, dist)
 	if rd < dist {
 		dist = rd
 		bn = rn
 	}
 	if c*c <= dist {
-		ln, ld := n.Left.search(q, d, dist)
+		ln, ld := n.Left.search(q, dist)
 		if ld < dist {
 			bn, dist = ln, ld
 		}
@@ -335,9 +334,8 @@ func (t *Tree) DoBounded(fn Operation, b *Bounding) bool {
 }
 
 func (n *Node) doBounded(fn Operation, b *Bounding, depth int) (done bool) {
-	d := Dim(depth % b[0].Dims())
-	lc, hc := b[0].Compare(n.Point, d), b[1].Compare(n.Point, d)
-	if lc <= 0 && n.Left != nil {
+	lc, hc := b[0].Compare(n.Point, n.Plane), b[1].Compare(n.Point, n.Plane)
+	if lc < 0 && n.Left != nil {
 		done = n.Left.doBounded(fn, b, depth+1)
 		if done {
 			return
