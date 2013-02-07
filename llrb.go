@@ -99,7 +99,7 @@ func (n *Node) rotateRight() (root *Node) {
 	return
 }
 
-// (aR,cR)bB -flipC-> (aB,cB)bR | (aB,cB)bR -flipC-> (aR,cR)bB 
+// (aR,cR)bB -flipC-> (aB,cB)bR | (aB,cB)bR -flipC-> (aR,cR)bB
 func (n *Node) flipColors() {
 	// Assumes: n has two children.
 	n.Color = !n.Color

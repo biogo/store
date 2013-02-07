@@ -97,7 +97,7 @@ func (t *Tree) isBalanced() bool {
 	return t.Root.isBalanced(black)
 }
 
-// Does every path from the root to a leaf have the given number 
+// Does every path from the root to a leaf have the given number
 // of black links?
 func (n *Node) isBalanced(black int) bool {
 	if n == nil && black == 0 {
