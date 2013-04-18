@@ -129,7 +129,7 @@ func (n *Node) rotateRight() (root *Node) {
 	return
 }
 
-// (aR,cR)bB -flipC-> (aB,cB)bR | (aB,cB)bR -flipC-> (aR,cR)bB 
+// (aR,cR)bB -flipC-> (aB,cB)bR | (aB,cB)bR -flipC-> (aR,cR)bB
 func (n *Node) flipColors() {
 	// Assumes: n has two children.
 	n.Color = !n.Color
@@ -461,7 +461,7 @@ func (n *Node) max() *Node {
 }
 
 // Floor returns the largest value equal to or less than the query q according to
-// q.Start().Compare(), with ties broken by q.ID().Compare().
+// q.Start().Compare(), with ties broken by comparison of ID() values.
 func (t *Tree) Floor(q Interface) (o Interface, err error) {
 	if t.Root == nil {
 		return
@@ -500,7 +500,7 @@ func (n *Node) floor(m Comparable, id uintptr) *Node {
 }
 
 // Ceil returns the smallest value equal to or greater than the query q according to
-// q.Start().Compare(), with ties broken by q.ID().Compare().
+// q.Start().Compare(), with ties broken by comparison of ID() values.
 func (t *Tree) Ceil(q Interface) (o Interface, err error) {
 	if t.Root == nil {
 		return

@@ -87,7 +87,7 @@ func (n *IntNode) rotateRight() (root *IntNode) {
 	return
 }
 
-// (aR,cR)bB -flipC-> (aB,cB)bR | (aB,cB)bR -flipC-> (aR,cR)bB 
+// (aR,cR)bB -flipC-> (aB,cB)bR | (aB,cB)bR -flipC-> (aR,cR)bB
 func (n *IntNode) flipColors() {
 	// Assumes: n has two children.
 	n.Color = !n.Color
@@ -423,7 +423,7 @@ func (n *IntNode) max() *IntNode {
 }
 
 // Floor returns the largest value equal to or less than the query q according to
-// q.Start().Compare(), with ties broken by q.ID().Compare().
+// q.Start().Compare(), with ties broken by comparison of ID() values.
 func (t *IntTree) Floor(q IntInterface) (o IntInterface, err error) {
 	if t.Root == nil {
 		return
@@ -462,7 +462,7 @@ func (n *IntNode) floor(m int, id uintptr) *IntNode {
 }
 
 // Ceil returns the smallest value equal to or greater than the query q according to
-// q.Start().Compare(), with ties broken by q.ID().Compare().
+// q.Start().Compare(), with ties broken by comparison of ID() values.
 func (t *IntTree) Ceil(q IntInterface) (o IntInterface, err error) {
 	if t.Root == nil {
 		return
