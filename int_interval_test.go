@@ -90,7 +90,7 @@ func (t *IntTree) isBalanced() bool {
 	return t.Root.isBalanced(black)
 }
 
-// Does every path from the root to a leaf have the given number 
+// Does every path from the root to a leaf have the given number
 // of black links?
 func (n *IntNode) isBalanced(black int) bool {
 	if n == nil && black == 0 {
@@ -584,6 +584,22 @@ func (s *S) TestIntDeleteMinMax(c *check.C) {
 			c.Fatal("Cannot continue test: invariant contradiction")
 		}
 	}
+}
+
+// Check for correct child range calculation when the left child
+// extends beyond the right child.
+func (s *S) TestIntRangeBug(c *check.C) {
+	var t IntTree
+	for i, e := range []*intOverlap{
+		{start: 0, end: 10},
+		{start: 1, end: 5},
+		{start: 1, end: 5},
+	} {
+		e.id = uintptr(i)
+		err := t.Insert(e, false)
+		c.Assert(err, check.Equals, nil)
+	}
+	c.Check(t.isRanged(), check.Equals, true)
 }
 
 func (t *IntTree) dot(label string) string {

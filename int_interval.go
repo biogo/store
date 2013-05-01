@@ -123,9 +123,11 @@ func (n *IntNode) adjustRange() {
 	if n.Left != nil {
 		n.Range.Start = intMin(n.Interval.Start, n.Left.Range.Start)
 		n.Range.End = intMax(n.Interval.End, n.Left.Range.End)
+	} else {
+		n.Range = n.Interval
 	}
 	if n.Right != nil {
-		n.Range.End = intMax(n.Interval.End, n.Right.Range.End)
+		n.Range.End = intMax(n.Range.End, n.Right.Range.End)
 	}
 }
 

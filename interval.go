@@ -165,9 +165,12 @@ func (n *Node) adjustRange() {
 	if n.Left != nil {
 		n.Range.SetStart(min(n.Elem.Start(), n.Left.Range.Start()))
 		n.Range.SetEnd(max(n.Elem.End(), n.Left.Range.End()))
+	} else {
+		n.Range.SetStart(n.Elem.Start())
+		n.Range.SetEnd(n.Elem.End())
 	}
 	if n.Right != nil {
-		n.Range.SetEnd(max(n.Elem.End(), n.Right.Range.End()))
+		n.Range.SetEnd(max(n.Range.End(), n.Right.Range.End()))
 	}
 }
 
