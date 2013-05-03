@@ -333,8 +333,10 @@ type reverse struct {
 
 func (r reverse) Less(i, j int) bool { return r.Interface.Less(j, i) }
 
-// NearestSet finds the nearest values to the query accepted by the provided Keeper.
-// The Keeper retains the results.
+// NearestSet finds the nearest values to the query accepted by the provided Keeper, k.
+// k must be able to return a ComparableDist specifying the maximum acceptable distance
+// when Head() is called and retains the results of the search in min sorted order after
+// the call to NearestSet returns.
 func (t *Tree) NearestSet(k Keeper, q Comparable) {
 	if t.Root == nil {
 		return
