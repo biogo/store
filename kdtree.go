@@ -294,36 +294,62 @@ type ComparableDist struct {
 	Dist       float64
 }
 
-// NKeeper is a Keeper that retains the n best ComparableDist that it is called to Keep.
-type NKeeper []ComparableDist
+// Heap is a max heap sorted on Dist.
+type Heap []ComparableDist
 
-// NewNKeeper returns an NKeeper with the max value of the heap set to infinite distance.
-func NewNKeeper(n int) *NKeeper {
-	nk := make(NKeeper, 1, n)
-	nk[0].Dist = inf
-	return &nk
+func (h *Heap) Max() ComparableDist  { return (*h)[0] }
+func (h *Heap) Len() int             { return len(*h) }
+func (h *Heap) Less(i, j int) bool   { return (*h)[i].Dist > (*h)[j].Dist }
+func (h *Heap) Swap(i, j int)        { (*h)[i], (*h)[j] = (*h)[j], (*h)[i] }
+func (h *Heap) Push(x interface{})   { (*h) = append(*h, x.(ComparableDist)) }
+func (h *Heap) Pop() (i interface{}) { i, *h = (*h)[len(*h)-1], (*h)[:len(*h)-1]; return i }
+
+// NKeeper is a Keeper that retains the n best ComparableDists that it is called to Keep.
+type NKeeper struct {
+	Heap
 }
 
-func (nk *NKeeper) Head() ComparableDist { return (*nk)[0] }
-func (nk *NKeeper) Keep(c ComparableDist) {
-	if c.Dist < (*nk)[0].Dist {
-		if len(*nk) == cap(*nk) {
-			heap.Pop(nk)
+// NewNKeeper returns an NKeeper with the max value of the heap set to infinite distance. The
+// returned NKeeper is able to retain at most n values.
+func NewNKeeper(n int) *NKeeper {
+	k := NKeeper{make(Heap, 1, n)}
+	k.Heap[0].Dist = inf
+	return &k
+}
+
+// Keep add c to the heap if its distance is less than the maximum value of the heap. If adding
+// c would increase the size of the heap beyond the initial maximum length, the maximum value of
+// the heap is dropped.
+func (k *NKeeper) Keep(c ComparableDist) {
+	if c.Dist < k.Heap[0].Dist {
+		if len(k.Heap) == cap(k.Heap) {
+			heap.Pop(k)
 		}
-		heap.Push(nk, c)
+		heap.Push(k, c)
 	}
 }
-func (nk *NKeeper) Len() int             { return len(*nk) }
-func (nk *NKeeper) Less(i, j int) bool   { return (*nk)[i].Dist > (*nk)[j].Dist }
-func (nk *NKeeper) Swap(i, j int)        { (*nk)[i], (*nk)[j] = (*nk)[j], (*nk)[i] }
-func (nk *NKeeper) Push(x interface{})   { (*nk) = append(*nk, x.(ComparableDist)) }
-func (nk *NKeeper) Pop() (i interface{}) { i, *nk = (*nk)[len(*nk)-1], (*nk)[:len(*nk)-1]; return i }
+
+// DistKeeper is a Keeper that retains the ComparableDists within the specified distance of the
+// query that it is called to Keep.
+type DistKeeper struct {
+	Heap
+}
+
+// NewDistKeeper returns an DistKeeper with the max value of the heap set to d.
+func NewDistKeeper(d float64) *DistKeeper { return &DistKeeper{Heap{{Dist: d}}} }
+
+// Keep adds c to the heap if its distance is less than or equal to the max value of the heap.
+func (k *DistKeeper) Keep(c ComparableDist) {
+	if c.Dist <= k.Heap[0].Dist {
+		heap.Push(k, c)
+	}
+}
 
 // Keeper implements a conditional max heap sorted on the Dist field of the ComparableDist type.
 // kd search is guided by the distance stored in the max value of the heap.
 type Keeper interface {
-	Head() ComparableDist // Head returns the maximum element of the Keeper.
-	Keep(ComparableDist)  // Keep conditionally pushes the provided ComparableDist onto the heap.
+	Keep(ComparableDist) // Keep conditionally pushes the provided ComparableDist onto the heap.
+	Max() ComparableDist // Max returns the maximum element of the Keeper.
 	heap.Interface
 }
 
@@ -335,7 +361,7 @@ func (r reverse) Less(i, j int) bool { return r.Interface.Less(j, i) }
 
 // NearestSet finds the nearest values to the query accepted by the provided Keeper, k.
 // k must be able to return a ComparableDist specifying the maximum acceptable distance
-// when Head() is called and retains the results of the search in min sorted order after
+// when Max() is called, and retains the results of the search in min sorted order after
 // the call to NearestSet returns.
 func (t *Tree) NearestSet(k Keeper, q Comparable) {
 	if t.Root == nil {
@@ -358,13 +384,13 @@ func (n *Node) searchSet(q Comparable, k Keeper) {
 	k.Keep(ComparableDist{Comparable: n.Point, Dist: q.Distance(n.Point)})
 	if c <= 0 {
 		n.Left.searchSet(q, k)
-		if c*c <= k.Head().Dist {
+		if c*c <= k.Max().Dist {
 			n.Right.searchSet(q, k)
 		}
 		return
 	}
 	n.Right.searchSet(q, k)
-	if c*c <= k.Head().Dist {
+	if c*c <= k.Max().Dist {
 		n.Left.searchSet(q, k)
 	}
 	return

@@ -230,14 +230,14 @@ func nearestN(n int, q Point, p Points) []ComparableDist {
 	for i := 0; i < p.Len(); i++ {
 		nk.Keep(ComparableDist{Comparable: p[i], Dist: q.Distance(p[i])})
 	}
-	if len(*nk) == 1 {
-		return *nk
+	if len(nk.Heap) == 1 {
+		return nk.Heap
 	}
 	sort.Sort(nk)
-	for i, j := 0, len(*nk)-1; i < j; i, j = i+1, j-1 {
-		(*nk)[i], (*nk)[j] = (*nk)[j], (*nk)[i]
+	for i, j := 0, len(nk.Heap)-1; i < j; i, j = i+1, j-1 {
+		nk.Heap[i], nk.Heap[j] = nk.Heap[j], nk.Heap[i]
 	}
-	return *nk
+	return nk.Heap
 }
 
 func (s *S) TestNearestSet(c *check.C) {
@@ -275,7 +275,7 @@ func (s *S) TestNearestSet(c *check.C) {
 				ed[p.Dist] = d
 			}
 			kd := make(map[float64]map[string]struct{})
-			for _, p := range *nk {
+			for _, p := range nk.Heap {
 				c.Check(max >= p.Dist, check.Equals, true)
 				d, ok := kd[p.Dist]
 				if !ok {
@@ -448,8 +448,8 @@ func BenchmarkNearestSetN10(b *testing.B) {
 	var nk = NewNKeeper(10)
 	for i := 0; i < b.N; i++ {
 		bTree.NearestSet(nk, Point{rand.Float64(), rand.Float64(), rand.Float64()})
-		*nk = (*nk)[:1]
-		(*nk)[0] = ComparableDist{Comparable: nil, Dist: inf}
+		nk.Heap = nk.Heap[:1]
+		nk.Heap[0] = ComparableDist{Comparable: nil, Dist: inf}
 	}
 }
 
