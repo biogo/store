@@ -5,7 +5,6 @@
 package kdtree
 
 import (
-	"container/heap"
 	"flag"
 	"fmt"
 	check "launchpad.net/gocheck"
@@ -226,80 +225,19 @@ func (s *S) TestNearest(c *check.C) {
 	}
 }
 
-type pDist struct {
-	Point
-	dist float64
-}
-
-type pDists []pDist
-
-func newPDists(n int) pDists {
-	pd := make(pDists, 1, n)
-	pd[0].dist = inf
-	return pd
-}
-
-func (pd *pDists) Keep(p pDist) {
-	if p.dist < (*pd)[0].dist {
-		if len(*pd) == cap(*pd) {
-			heap.Pop(pd)
-		}
-		heap.Push(pd, p)
-	}
-}
-func (pd pDists) Len() int              { return len(pd) }
-func (pd pDists) Less(i, j int) bool    { return pd[i].dist > pd[j].dist }
-func (pd pDists) Swap(i, j int)         { pd[i], pd[j] = pd[j], pd[i] }
-func (pd *pDists) Push(x interface{})   { (*pd) = append(*pd, x.(pDist)) }
-func (pd *pDists) Pop() (i interface{}) { i, *pd = (*pd)[len(*pd)-1], (*pd)[:len(*pd)-1]; return i }
-
-func nearestN(n int, q Point, p Points) ([]Comparable, []float64) {
-	pd := newPDists(n)
+func nearestN(n int, q Point, p Points) []ComparableDist {
+	nk := NewNKeeper(n)
 	for i := 0; i < p.Len(); i++ {
-		pd.Keep(pDist{Point: p[i], dist: q.Distance(p[i])})
+		nk.Keep(ComparableDist{Comparable: p[i], Dist: q.Distance(p[i])})
 	}
-	if len(pd) == 1 {
-		return []Comparable{pd[0].Point}, []float64{pd[0].dist}
+	if len(*nk) == 1 {
+		return *nk
 	}
-	if pd[0].dist == inf {
-		pd = pd[1:]
+	sort.Sort(nk)
+	for i, j := 0, len(*nk)-1; i < j; i, j = i+1, j-1 {
+		(*nk)[i], (*nk)[j] = (*nk)[j], (*nk)[i]
 	}
-	sort.Sort(pd)
-	for i, j := 0, len(pd)-1; i < j; i, j = i+1, j-1 {
-		pd[i], pd[j] = pd[j], pd[i]
-	}
-	ns := make([]Comparable, len(pd))
-	d := make([]float64, len(pd))
-	for i, n := range pd {
-		ns[i] = n.Point
-		d[i] = n.dist
-	}
-	return ns, d
-}
-
-func (s *S) TestNearestN(c *check.C) {
-	t := New(wpData, false)
-	in := append([]Point{
-		{4, 6},
-		{7, 5},
-		{8, 7},
-		{6, -5},
-		{1e5, 1e5},
-		{1e5, -1e5},
-		{-1e5, 1e5},
-		{-1e5, -1e5},
-		{1e5, 0},
-		{0, -1e5},
-		{0, 1e5},
-		{-1e5, 0}}, wpData[:len(wpData)-1]...) // The point (9,6) is excluded as it has two pairs of equidistant points.
-	for k := 1; k <= len(wpData); k++ {
-		for i, q := range in {
-			p, d := t.NearestN(k, q)
-			ep, ed := nearestN(k, q, wpData)
-			c.Check(p, check.DeepEquals, ep, check.Commentf("Test k=%d %d: query %.3f expects %.3f", k, i, q, ep))
-			c.Check(d, check.DeepEquals, ed)
-		}
-	}
+	return *nk
 }
 
 func (s *S) TestNearestSet(c *check.C) {
@@ -316,31 +254,47 @@ func (s *S) TestNearestSet(c *check.C) {
 		{1e5, 0},
 		{0, -1e5},
 		{0, 1e5},
-		{-1e5, 0}}, wpData...)
+		{-1e5, 0}}, wpData[:len(wpData)-1]...)
 	for k := 1; k <= len(wpData); k++ {
 		for i, q := range in {
-			ep, ed := t.NearestN(k, q)
-			keep := newNDists(k)
-			t.NearestSet(&keep, q)
-			p := make(map[float64][]Comparable)
-			d := make([]float64, len(keep))
-			for i, n := range keep {
-				p[n.Dist] = append(p[n.Dist], n.Point)
-				d[i] = n.Dist
-			}
-			c.Check(d, check.DeepEquals, ed, check.Commentf("Test k=%d %d: query %.3f expects %.3f", k, i, q, ed))
-			// Sort order is not the same between the two methods, so we do this...
-			for j, d := range ed {
-				// Find a point value pv in p[d] that matches the current point in ed.
-				var ok bool
-				for _, pv := range p[d] {
-					if reflect.DeepEqual(pv, ep[j]) {
-						ok = true
-						break
-					}
+			ep := nearestN(k, q, wpData)
+			nk := NewNKeeper(k)
+			t.NearestSet(nk, q)
+
+			var max float64
+			ed := make(map[float64]map[string]struct{})
+			for _, p := range ep {
+				if p.Dist > max {
+					max = p.Dist
 				}
-				c.Check(ok, check.Equals, true)
+				d, ok := ed[p.Dist]
+				if !ok {
+					d = make(map[string]struct{})
+				}
+				d[fmt.Sprint(p.Comparable)] = struct{}{}
+				ed[p.Dist] = d
 			}
+			kd := make(map[float64]map[string]struct{})
+			for _, p := range *nk {
+				c.Check(max >= p.Dist, check.Equals, true)
+				d, ok := kd[p.Dist]
+				if !ok {
+					d = make(map[string]struct{})
+				}
+				d[fmt.Sprint(p.Comparable)] = struct{}{}
+				kd[p.Dist] = d
+			}
+
+			// If the available number of slots does not fit all the coequal furthest points
+			// we will fail the check. So remove, but check them minimally here.
+			if !reflect.DeepEqual(ed[max], kd[max]) {
+				// The best we can do at this stage is confirm that there are an equal number of matches at this distance.
+				c.Check(len(ed[max]), check.Equals, len(kd[max]))
+				delete(ed, max)
+				delete(kd, max)
+			}
+
+			c.Check(kd, check.DeepEquals, ed, check.Commentf("Test k=%d %d: query %.3f expects %.3f", k, i, q, ep))
 		}
 	}
 }
@@ -490,35 +444,21 @@ func BenchmarkNearBrute(b *testing.B) {
 	_, _ = r, d
 }
 
-func BenchmarkNearestN10(b *testing.B) {
-	var (
-		r []Comparable
-		d []float64
-	)
-	for i := 0; i < b.N; i++ {
-		r, d = bTree.NearestN(10, Point{rand.Float64(), rand.Float64(), rand.Float64()})
-	}
-	_, _ = r, d
-}
-
 func BenchmarkNearestSetN10(b *testing.B) {
-	var keep = newNDists(10)
+	var nk = NewNKeeper(10)
 	for i := 0; i < b.N; i++ {
-		bTree.NearestSet(&keep, Point{rand.Float64(), rand.Float64(), rand.Float64()})
-		keep = keep[:1]
-		keep[0] = NodeDist{nil, inf}
+		bTree.NearestSet(nk, Point{rand.Float64(), rand.Float64(), rand.Float64()})
+		*nk = (*nk)[:1]
+		(*nk)[0] = ComparableDist{Comparable: nil, Dist: inf}
 	}
 }
 
 func BenchmarkNearBruteN10(b *testing.B) {
-	var (
-		r []Comparable
-		d []float64
-	)
+	var r []ComparableDist
 	for i := 0; i < b.N; i++ {
-		r, d = nearestN(10, Point{rand.Float64(), rand.Float64(), rand.Float64()}, bData)
+		r = nearestN(10, Point{rand.Float64(), rand.Float64(), rand.Float64()}, bData)
 	}
-	_, _ = r, d
+	_ = r
 }
 
 func dot(t *Tree, label string) string {

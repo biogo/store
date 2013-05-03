@@ -289,86 +289,41 @@ func (n *Node) search(q Comparable, dist float64) (*Node, float64) {
 	return bn, dist
 }
 
-type NodeDist struct {
-	*Node
-	Dist float64
+type ComparableDist struct {
+	Comparable Comparable
+	Dist       float64
 }
 
-type nDists []NodeDist
+// NKeeper is a Keeper that retains the n best ComparableDist that it is called to Keep.
+type NKeeper []ComparableDist
 
-func newNDists(n int) nDists {
-	nd := make(nDists, 1, n)
-	nd[0].Dist = inf
-	return nd
+// NewNKeeper returns an NKeeper with the max value of the heap set to infinite distance.
+func NewNKeeper(n int) *NKeeper {
+	nk := make(NKeeper, 1, n)
+	nk[0].Dist = inf
+	return &nk
 }
 
-func (nd *nDists) Head() NodeDist { return (*nd)[0] }
-func (nd *nDists) Keep(n NodeDist) {
-	if n.Dist < (*nd)[0].Dist {
-		if len(*nd) == cap(*nd) {
-			heap.Pop(nd)
+func (nk *NKeeper) Head() ComparableDist { return (*nk)[0] }
+func (nk *NKeeper) Keep(c ComparableDist) {
+	if c.Dist < (*nk)[0].Dist {
+		if len(*nk) == cap(*nk) {
+			heap.Pop(nk)
 		}
-		heap.Push(nd, n)
+		heap.Push(nk, c)
 	}
 }
-func (nd nDists) Len() int              { return len(nd) }
-func (nd nDists) Less(i, j int) bool    { return nd[i].Dist > nd[j].Dist }
-func (nd nDists) Swap(i, j int)         { nd[i], nd[j] = nd[j], nd[i] }
-func (nd *nDists) Push(x interface{})   { (*nd) = append(*nd, x.(NodeDist)) }
-func (nd *nDists) Pop() (i interface{}) { i, *nd = (*nd)[len(*nd)-1], (*nd)[:len(*nd)-1]; return i }
+func (nk *NKeeper) Len() int             { return len(*nk) }
+func (nk *NKeeper) Less(i, j int) bool   { return (*nk)[i].Dist > (*nk)[j].Dist }
+func (nk *NKeeper) Swap(i, j int)        { (*nk)[i], (*nk)[j] = (*nk)[j], (*nk)[i] }
+func (nk *NKeeper) Push(x interface{})   { (*nk) = append(*nk, x.(ComparableDist)) }
+func (nk *NKeeper) Pop() (i interface{}) { i, *nk = (*nk)[len(*nk)-1], (*nk)[:len(*nk)-1]; return i }
 
-// NearestN returns the nearest n values to the query and the distances between them and the query.
-func (t *Tree) NearestN(n int, q Comparable) ([]Comparable, []float64) {
-	if t.Root == nil {
-		return nil, []float64{inf}
-	}
-	nd := t.Root.searchN(q, newNDists(n))
-	if len(nd) == 1 {
-		if nd[0].Node == nil {
-			return nil, []float64{inf}
-		} else {
-			return []Comparable{nd[0].Node.Point}, []float64{nd[0].Dist}
-		}
-	}
-	sort.Sort(nd)
-	for i, j := 0, len(nd)-1; i < j; i, j = i+1, j-1 {
-		nd[i], nd[j] = nd[j], nd[i]
-	}
-	ns := make([]Comparable, len(nd))
-	dist := make([]float64, len(nd))
-	for i, n := range nd {
-		ns[i] = n.Point
-		dist[i] = n.Dist
-	}
-	return ns, dist
-}
-
-func (n *Node) searchN(q Comparable, dists nDists) nDists {
-	if n == nil {
-		return dists
-	}
-
-	c := q.Compare(n.Point, n.Plane)
-	dists.Keep(NodeDist{Node: n, Dist: q.Distance(n.Point)})
-	if c <= 0 {
-		dists = n.Left.searchN(q, dists)
-		if c*c <= dists[0].Dist {
-			dists = n.Right.searchN(q, dists)
-		}
-		return dists
-	}
-	dists = n.Right.searchN(q, dists)
-	if c*c <= dists[0].Dist {
-		dists = n.Left.searchN(q, dists)
-	}
-	return dists
-}
-
-// Keeper implements a conditional max heap sorted on the Dist field of the NodeDist type.
+// Keeper implements a conditional max heap sorted on the Dist field of the ComparableDist type.
 // kd search is guided by the distance stored in the max value of the heap.
 type Keeper interface {
-	Head() NodeDist // Head returns the maximum element of the Keeper.
-	Keep(NodeDist)  // Keep conditionally pushes the provided NodeDist onto the heap.
+	Head() ComparableDist // Head returns the maximum element of the Keeper.
+	Keep(ComparableDist)  // Keep conditionally pushes the provided ComparableDist onto the heap.
 	heap.Interface
 }
 
@@ -398,7 +353,7 @@ func (n *Node) searchSet(q Comparable, k Keeper) {
 	}
 
 	c := q.Compare(n.Point, n.Plane)
-	k.Keep(NodeDist{Node: n, Dist: q.Distance(n.Point)})
+	k.Keep(ComparableDist{Comparable: n.Point, Dist: q.Distance(n.Point)})
 	if c <= 0 {
 		n.Left.searchSet(q, k)
 		if c*c <= k.Head().Dist {
