@@ -240,7 +240,7 @@ func nearestN(n int, q Point, p Points) []ComparableDist {
 	return nk.Heap
 }
 
-func (s *S) TestNearestSet(c *check.C) {
+func (s *S) TestNearestSetN(c *check.C) {
 	t := New(wpData, false)
 	in := append([]Point{
 		{4, 6},
@@ -295,6 +295,42 @@ func (s *S) TestNearestSet(c *check.C) {
 			}
 
 			c.Check(kd, check.DeepEquals, ed, check.Commentf("Test k=%d %d: query %.3f expects %.3f", k, i, q, ep))
+		}
+	}
+}
+
+func (s *S) TestNearestSetDist(c *check.C) {
+	t := New(wpData, false)
+	for i, q := range []Point{
+		{4, 6},
+		{7, 5},
+		{8, 7},
+		{6, -5},
+	} {
+		for d := 1.; d < 100; d += 0.1 {
+			dk := NewDistKeeper(d)
+			t.NearestSet(dk, q)
+
+			hits := make(map[string]float64)
+			for _, p := range wpData {
+				hits[fmt.Sprint(p)] = p.Distance(q)
+			}
+
+			for _, p := range dk.Heap {
+				var finished bool
+				if p.Comparable != nil {
+					delete(hits, fmt.Sprint(p.Comparable))
+					c.Check(finished, check.Equals, false)
+					dist := p.Comparable.Distance(q)
+					c.Check(dist <= d, check.Equals, true, check.Commentf("Test %d: query %v found %v expect %.3f <= %.3f", i, q, p, dist, d))
+				} else {
+					finished = true
+				}
+			}
+
+			for p, dist := range hits {
+				c.Check(dist > d, check.Equals, true, check.Commentf("Test %d: query %v missed %v expect %.3f > %.3f", i, q, p, dist, d))
+			}
 		}
 	}
 }
