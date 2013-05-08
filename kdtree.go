@@ -353,12 +353,6 @@ type Keeper interface {
 	heap.Interface
 }
 
-type reverse struct {
-	sort.Interface
-}
-
-func (r reverse) Less(i, j int) bool { return r.Interface.Less(j, i) }
-
 // NearestSet finds the nearest values to the query accepted by the provided Keeper, k.
 // k must be able to return a ComparableDist specifying the maximum acceptable distance
 // when Max() is called, and retains the results of the search in min sorted order after
@@ -371,7 +365,7 @@ func (t *Tree) NearestSet(k Keeper, q Comparable) {
 	if k.Len() == 1 {
 		return
 	}
-	sort.Sort(reverse{k})
+	sort.Sort(sort.Reverse(k))
 	return
 }
 

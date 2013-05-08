@@ -68,8 +68,6 @@ func Select(list SortSlicer, k int) int {
 			start += pivot
 		}
 	}
-
-	panic("cannot reach")
 }
 
 func min(a, b int) int {
