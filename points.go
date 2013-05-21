@@ -31,10 +31,9 @@ func (p Point) Distance(c Comparable) float64 {
 	}
 	return sum
 }
-func (p Point) Clone() Comparable { return append(Point(nil), p...) }
 func (p Point) Extend(b *Bounding) *Bounding {
 	if b == nil {
-		b = &Bounding{p.Clone(), p.Clone()}
+		b = &Bounding{append(Point(nil), p...), append(Point(nil), p...)}
 	}
 	min := b[0].(Point)
 	max := b[1].(Point)

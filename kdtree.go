@@ -57,19 +57,14 @@ type Comparable interface {
 	Distance(Comparable) float64
 }
 
-// An Extender can increase a bounding volume to include the point.
+// An Extender is a Comparable that can increase a bounding volume to include the
+// point represented by the Comparable.
 type Extender interface {
-	// Clone returns a copy of the Comparable.
-	Clone() Comparable
+	Comparable
 
 	// Extend returns a bounding box that has been extended to include the
 	// receiver. Extend may return nil.
 	Extend(*Bounding) *Bounding
-}
-
-type extender interface {
-	Comparable
-	Extender
 }
 
 // A Bounding represents a volume bounding box.
@@ -173,7 +168,7 @@ func (t *Tree) Insert(c Comparable, bounding bool) {
 	if t.Root != nil {
 		bounding = t.Root.Bounding != nil
 	}
-	if c, ok := c.(extender); ok && bounding {
+	if c, ok := c.(Extender); ok && bounding {
 		t.Root = t.Root.insertBounded(c, 0, bounding)
 		return
 	} else if !ok && t.Root != nil {
@@ -202,11 +197,11 @@ func (n *Node) insert(c Comparable, d Dim) *Node {
 	return n
 }
 
-func (n *Node) insertBounded(c extender, d Dim, bounding bool) *Node {
+func (n *Node) insertBounded(c Extender, d Dim, bounding bool) *Node {
 	if n == nil {
 		var b *Bounding
 		if bounding {
-			b = &Bounding{c.Clone(), c.Clone()}
+			b = c.Extend(b)
 		}
 		return &Node{
 			Point:    c,
