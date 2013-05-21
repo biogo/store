@@ -20,7 +20,6 @@ var Randoms = 100
 // A Point represents a point in a k-d space that satisfies the Comparable interface.
 type Point []float64
 
-func (p Point) Clone() Comparable                   { return append(Point(nil), p...) }
 func (p Point) Compare(c Comparable, d Dim) float64 { q := c.(Point); return p[d] - q[d] }
 func (p Point) Dims() int                           { return len(p) }
 func (p Point) Distance(c Comparable) float64 {
@@ -32,6 +31,7 @@ func (p Point) Distance(c Comparable) float64 {
 	}
 	return sum
 }
+func (p Point) Clone() Comparable { return append(Point(nil), p...) }
 func (p Point) Extend(b *Bounding) *Bounding {
 	if b == nil {
 		b = &Bounding{p.Clone(), p.Clone()}

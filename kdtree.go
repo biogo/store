@@ -41,9 +41,6 @@ type Dim int
 
 // A Comparable is the element interface for values stored in a k-d tree.
 type Comparable interface {
-	// Clone returns a copy of the Comparable.
-	Clone() Comparable
-
 	// Compare returns the shortest translation of the plane through b with
 	// normal vector along dimension d to the parallel plane through a.
 	//
@@ -60,8 +57,13 @@ type Comparable interface {
 	Distance(Comparable) float64
 }
 
-// An Extender can increase a bounding volume to include the point. Extend may return nil.
+// An Extender can increase a bounding volume to include the point.
 type Extender interface {
+	// Clone returns a copy of the Comparable.
+	Clone() Comparable
+
+	// Extend returns a bounding box that has been extended to include the
+	// receiver. Extend may return nil.
 	Extend(*Bounding) *Bounding
 }
 

@@ -16,7 +16,6 @@ var nbRandoms = 100
 // An nbPoint represents a point in a k-d space that satisfies the Comparable interface.
 type nbPoint Point
 
-func (p nbPoint) Clone() Comparable                   { return append(nbPoint(nil), p...) }
 func (p nbPoint) Compare(c Comparable, d Dim) float64 { q := c.(nbPoint); return p[d] - q[d] }
 func (p nbPoint) Dims() int                           { return len(p) }
 func (p nbPoint) Distance(c Comparable) float64 {
