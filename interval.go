@@ -216,7 +216,7 @@ func (t *Tree) Len() int {
 }
 
 // Get returns a slice of Interfaces that overlap q in the Tree according
-// to Overlap.
+// to q.Overlap().
 func (t *Tree) Get(q Overlapper) (o []Interface) {
 	if t.Root != nil && q.Overlap(t.Root.Range) {
 		t.Root.doMatch(func(e Interface) (done bool) { o = append(o, e); return }, q)

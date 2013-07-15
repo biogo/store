@@ -173,7 +173,7 @@ func (t *IntTree) Len() int {
 }
 
 // Get returns a slice of IntInterfaces that overlap q in the IntTree according
-// to Overlap.
+// to q.Overlap().
 func (t *IntTree) Get(q IntOverlapper) (o []IntInterface) {
 	if t.Root != nil && q.Overlap(t.Root.Range) {
 		t.Root.doMatch(func(e IntInterface) (done bool) { o = append(o, e); return }, q)
