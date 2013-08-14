@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package llrb implements a Left-Leaning Red Black tree as described in
+// Package llrb implements Left-Leaning Red Black trees as described by Robert Sedgewick.
+//
+// More details relating to the implementation are available at the following locations:
+//
 //  http://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf
 //  http://www.cs.princeton.edu/~rs/talks/LLRB/Java/RedBlackBST.java
 //  http://www.teachsolaisgames.com/articles/balanced_left_leaning.html
