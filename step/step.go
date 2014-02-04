@@ -9,7 +9,7 @@
 package step
 
 import (
-	"code.google.com/p/biogo.llrb"
+	"code.google.com/p/biogo.store/llrb"
 	"errors"
 	"fmt"
 )
