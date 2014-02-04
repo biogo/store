@@ -9,7 +9,7 @@
 package landscape
 
 import (
-	"code.google.com/p/biogo.interval"
+	"code.google.com/p/biogo.store/interval"
 
 	"container/heap"
 	"sort"

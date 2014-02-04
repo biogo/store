@@ -5,7 +5,7 @@
 package landscape
 
 import (
-	"code.google.com/p/biogo.interval"
+	"code.google.com/p/biogo.store/interval"
 	check "launchpad.net/gocheck"
 	"testing"
 )

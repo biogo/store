@@ -1,11 +1,11 @@
-// Copyright ©2012 The bíogo.interval Authors. All rights reserved.
+// Copyright ©2012 The bíogo Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package interval
 
 import (
-	"code.google.com/p/biogo.llrb"
+	"code.google.com/p/biogo.store/llrb"
 	"flag"
 	"fmt"
 	check "launchpad.net/gocheck"
