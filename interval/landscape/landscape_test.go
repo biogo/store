@@ -30,7 +30,7 @@ type lr struct {
 	l []int
 }
 
-func (s *S) TestDo(c *check.C) {
+func (s *S) TestDescribeTree(c *check.C) {
 	for _, t := range []struct {
 		ivs    []iv
 		expect []lr
@@ -252,7 +252,7 @@ func (s *S) TestDo(c *check.C) {
 			err := it.Insert(e, false)
 			c.Assert(err, check.Equals, nil)
 		}
-		Describe(&it, func(pos int, l []int) {
+		DescribeTree(&it, func(pos int, l []int) {
 			if len(l) > 0 {
 				r = append(r, lr{pos, append([]int(nil), l...)})
 			}

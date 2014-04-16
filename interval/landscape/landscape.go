@@ -43,13 +43,13 @@ func reverse(v []int) {
 	}
 }
 
-// Describe calculates the persistence landscape functions λₖ for the interval
+// DescribeTree calculates the persistence landscape functions λₖ for the interval
 // data in the provided interval tree. fn is called for each position t of the span
 // of the interval data with the values for t and the k λ functions at t.
 // Explicit zero values for a λₖ(t) are included only at the end points of intervals
 // in the span. Note that intervals stored in the tree must have unique id values
 // within the tree.
-func Describe(it *interval.IntTree, fn func(t int, λₜ []int)) {
+func DescribeTree(it *interval.IntTree, fn func(t int, λₜ []int)) {
 	if it == nil || it.Len() == 0 {
 		return
 	}
