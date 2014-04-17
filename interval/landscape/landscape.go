@@ -132,7 +132,7 @@ type Interface interface {
 // data in the provided Interface. fn is called for each position t of the span
 // of the interval data with the values for t and the k λ functions at t.
 // Explicit zero values for a λₖ(t) are included only at the end points of intervals
-// in the span. Note that intervals stored in data must have unique id values.
+// in the span.
 func Describe(data Interface, fn func(t int, λₜ []int)) {
 	if data == nil || data.Len() == 0 {
 		return
