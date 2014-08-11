@@ -493,7 +493,7 @@ func (n *Node) doReverse(fn Operation) (done bool) {
 	return
 }
 
-// DoRange performs fn on all values stored in the tree over the interval [from, to] from left
+// DoRange performs fn on all values stored in the tree over the interval [from, to) from left
 // to right. If to is less than from DoRange will panic. A boolean is returned indicating whether
 // the Do traversal was interrupted by an Operation returning true. If fn alters stored values'
 // sort relationships future tree operation behaviors are undefined.
@@ -527,7 +527,7 @@ func (n *Node) doRange(fn Operation, lo, hi Comparable) (done bool) {
 	return
 }
 
-// DoRangeReverse performs fn on all values stored in the tree over the interval [to, from] from
+// DoRangeReverse performs fn on all values stored in the tree over the interval (to, from] from
 // right to left. If from is less than to DoRange will panic. A boolean is returned indicating
 // whether the Do traversal was interrupted by an Operation returning true. If fn alters stored
 // values' sort relationships future tree operation behaviors are undefined.
