@@ -613,8 +613,8 @@ func (t *IntTree) dot(label string) string {
 	)
 	follow = func(n *IntNode) {
 		id := uintptr(unsafe.Pointer(n))
-		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> interval:%v\\nrange:%v\\nid:%d|<Right>\"];",
-			id, n.Elem, n.Range, n.Elem.ID())
+		c := fmt.Sprintf("%d[label = \"<Left> |<Elem> interval:%v\\nrange:[%d,%d)\\nid:%d|<Right>\"];",
+			id, n.Elem, n.Range.Start, n.Range.End, n.Elem.ID())
 		if n.Left != nil {
 			c += fmt.Sprintf("\n\t\tedge [color=%v,arrowhead=%s]; \"%d\":Left -> \"%d\":Elem;",
 				n.Left.color(), arrows[n.Left.color()], id, uintptr(unsafe.Pointer(n.Left)))
