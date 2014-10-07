@@ -95,37 +95,54 @@ func (n *Node) color() llrb.Color {
 	return n.Color
 }
 
+func maxRange(root, left, right *Node) Comparable {
+	end := root.Elem.End()
+	if left != nil && left.Range.End().Compare(end) > 0 {
+		end = left.Range.End()
+	}
+	if right != nil && right.Range.End().Compare(end) > 0 {
+		end = right.Range.End()
+	}
+	return end
+}
+
 // (a,c)b -rotL-> ((a,)b,)c
 func (n *Node) rotateLeft() (root *Node) {
-	// Assumes: n has two children.
+	// Assumes: n has a right child.
 	root = n.Right
-	if root.Left != nil {
-		n.Range.SetEnd(max(n.Elem.End(), root.Left.Range.End()))
-	} else {
-		n.Range.SetEnd(n.Elem.End())
-	}
-	root.Range.SetStart(min(root.Elem.Start(), n.Range.Start()))
 	n.Right = root.Left
 	root.Left = n
 	root.Color = n.Color
 	n.Color = llrb.Red
+
+	root.Left.Range.SetEnd(maxRange(root.Left, root.Left.Left, root.Left.Right))
+	if root.Left == nil {
+		root.Range.SetStart(root.Elem.Start())
+	} else {
+		root.Range.SetStart(root.Left.Range.Start())
+	}
+	root.Range.SetEnd(maxRange(root, root.Left, root.Right))
+
 	return
 }
 
 // (a,c)b -rotR-> (,(,c)b)a
 func (n *Node) rotateRight() (root *Node) {
-	// Assumes: n has two children.
+	// Assumes: n has a left child.
 	root = n.Left
-	if root.Right != nil {
-		n.Range.SetStart(min(n.Elem.Start(), root.Right.Range.Start()))
-	} else {
-		n.Range.SetStart(n.Elem.Start())
-	}
-	root.Range.SetEnd(max(root.Elem.End(), n.Range.End()))
 	n.Left = root.Right
 	root.Right = n
 	root.Color = n.Color
 	n.Color = llrb.Red
+
+	if root.Right.Left == nil {
+		root.Right.Range.SetStart(root.Right.Elem.Start())
+	} else {
+		root.Right.Range.SetStart(root.Right.Left.Range.Start())
+	}
+	root.Right.Range.SetEnd(maxRange(root.Right, root.Right.Left, root.Right.Right))
+	root.Range.SetEnd(maxRange(root, root.Left, root.Right))
+
 	return
 }
 
@@ -162,16 +179,12 @@ func (n *Node) fixUp(fast bool) *Node {
 // adjustRange sets the Range to the maximum extent of the childrens' Range
 // spans and the node's Elem span.
 func (n *Node) adjustRange() {
-	if n.Left != nil {
-		n.Range.SetStart(min(n.Elem.Start(), n.Left.Range.Start()))
-		n.Range.SetEnd(max(n.Elem.End(), n.Left.Range.End()))
-	} else {
+	if n.Left == nil {
 		n.Range.SetStart(n.Elem.Start())
-		n.Range.SetEnd(n.Elem.End())
+	} else {
+		n.Range.SetStart(n.Left.Range.Start())
 	}
-	if n.Right != nil {
-		n.Range.SetEnd(max(n.Range.End(), n.Right.Range.End()))
-	}
+	n.Range.SetEnd(maxRange(n, n.Left, n.Right))
 }
 
 func min(a, b Comparable) Comparable {

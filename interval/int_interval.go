@@ -53,37 +53,54 @@ func (n *IntNode) color() llrb.Color {
 	return n.Color
 }
 
+func intMaxRange(root, left, right *IntNode) int {
+	end := root.Interval.End
+	if left != nil && left.Range.End > end {
+		end = left.Range.End
+	}
+	if right != nil && right.Range.End > end {
+		end = right.Range.End
+	}
+	return end
+}
+
 // (a,c)b -rotL-> ((a,)b,)c
 func (n *IntNode) rotateLeft() (root *IntNode) {
-	// Assumes: n has two children.
+	// Assumes: n has a right child.
 	root = n.Right
-	if root.Left != nil {
-		n.Range.End = intMax(n.Interval.End, root.Left.Range.End)
-	} else {
-		n.Range.End = n.Interval.End
-	}
-	root.Range.Start = intMin(root.Interval.Start, n.Range.Start)
 	n.Right = root.Left
 	root.Left = n
 	root.Color = n.Color
 	n.Color = llrb.Red
+
+	root.Left.Range.End = intMaxRange(root.Left, root.Left.Left, root.Left.Right)
+	if root.Left == nil {
+		root.Range.Start = root.Interval.Start
+	} else {
+		root.Range.Start = root.Left.Range.Start
+	}
+	root.Range.End = intMaxRange(root, root.Left, root.Right)
+
 	return
 }
 
 // (a,c)b -rotR-> (,(,c)b)a
 func (n *IntNode) rotateRight() (root *IntNode) {
-	// Assumes: n has two children.
+	// Assumes: n has a left child.
 	root = n.Left
-	if root.Right != nil {
-		n.Range.Start = intMin(n.Interval.Start, root.Right.Range.Start)
-	} else {
-		n.Range.Start = n.Interval.Start
-	}
-	root.Range.End = intMax(root.Interval.End, n.Range.End)
 	n.Left = root.Right
 	root.Right = n
 	root.Color = n.Color
 	n.Color = llrb.Red
+
+	if root.Right.Left == nil {
+		root.Right.Range.Start = root.Right.Interval.Start
+	} else {
+		root.Right.Range.Start = root.Right.Left.Range.Start
+	}
+	root.Right.Range.End = intMaxRange(root.Right, root.Right.Left, root.Right.Right)
+	root.Range.End = intMaxRange(root, root.Left, root.Right)
+
 	return
 }
 
@@ -120,15 +137,12 @@ func (n *IntNode) fixUp(fast bool) *IntNode {
 // adjustRange sets the Range to the maximum extent of the childrens' Range
 // spans and the node's Elem span.
 func (n *IntNode) adjustRange() {
-	if n.Left != nil {
-		n.Range.Start = intMin(n.Interval.Start, n.Left.Range.Start)
-		n.Range.End = intMax(n.Interval.End, n.Left.Range.End)
+	if n.Left == nil {
+		n.Range.Start = n.Interval.Start
 	} else {
-		n.Range = n.Interval
+		n.Range.Start = n.Left.Range.Start
 	}
-	if n.Right != nil {
-		n.Range.End = intMax(n.Range.End, n.Right.Range.End)
-	}
+	n.Range.End = intMaxRange(n, n.Left, n.Right)
 }
 
 func intMin(a, b int) int {

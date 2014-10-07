@@ -736,6 +736,43 @@ func (s *S) TestRangeBug(c *check.C) {
 	c.Check(t.isRanged(), check.Equals, true)
 }
 
+// Issue 15 is another case of a range invariant update bug.
+// https://code.google.com/p/biogo/issues/detail?id=15
+func (s *S) TestIssue15(c *check.C) {
+	ranges := []*overlap{
+		{start: 5, end: 6},
+		{start: 7, end: 8},
+		{start: 9, end: 10},
+		{start: 0, end: 4},
+		{start: 0, end: 1},
+		{start: 0, end: 1},
+		{start: 0, end: 1},
+	}
+
+	var t Tree
+	for i, iv := range ranges {
+		iv.id = uintptr(i)
+		err := t.Insert(iv, false)
+		c.Assert(err, check.Equals, nil)
+
+		failed := !c.Check(t.isRanged(), check.Equals, true)
+		if failed {
+			if *printTree {
+				c.Logf("Failing tree: %s\n\n", t.Root.describeTree(false, true))
+			}
+			if *genDot && t.Len() <= *dotLimit {
+				err := t.dotFile(fmt.Sprintf("Issue15Test_%02d", i), "")
+				if err != nil {
+					c.Errorf("Dot file write failed: %v", err)
+				}
+			}
+		}
+	}
+
+	got := t.Get(&overlap{start: 2, end: 3})
+	c.Check(len(got), check.Equals, 1, check.Commentf("Expected one overlap, got %d", len(got)))
+}
+
 func (t *Tree) dot(label string) string {
 	if t == nil {
 		return ""
