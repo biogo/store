@@ -187,20 +187,6 @@ func (n *Node) adjustRange() {
 	n.Range.SetEnd(maxRange(n, n.Left, n.Right))
 }
 
-func min(a, b Comparable) Comparable {
-	if a.Compare(b) < 0 {
-		return a
-	}
-	return b
-}
-
-func max(a, b Comparable) Comparable {
-	if a.Compare(b) > 0 {
-		return a
-	}
-	return b
-}
-
 func (n *Node) moveRedLeft() *Node {
 	n.flipColors()
 	if n.Right.Left.color() == llrb.Red {

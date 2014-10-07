@@ -271,6 +271,20 @@ func (n *Node) describeTree(char, color bool) string {
 	return string(s)
 }
 
+func min(a, b Comparable) Comparable {
+	if a.Compare(b) < 0 {
+		return a
+	}
+	return b
+}
+
+func max(a, b Comparable) Comparable {
+	if a.Compare(b) > 0 {
+		return a
+	}
+	return b
+}
+
 // Tests
 func Test(t *testing.T) { check.TestingT(t) }
 

@@ -145,20 +145,6 @@ func (n *IntNode) adjustRange() {
 	n.Range.End = intMaxRange(n, n.Left, n.Right)
 }
 
-func intMin(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func intMax(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 func (n *IntNode) moveRedLeft() *IntNode {
 	n.flipColors()
 	if n.Right.Left.color() == llrb.Red {

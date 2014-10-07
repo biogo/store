@@ -186,6 +186,20 @@ func (n *IntNode) describeTree(char, color bool) string {
 	return string(s)
 }
 
+func intMin(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func intMax(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // Tests
 
 func (s *S) TestIntNilOperations(c *check.C) {
