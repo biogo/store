@@ -93,6 +93,9 @@ func (n *Node) color() llrb.Color {
 	return n.Color
 }
 
+// maxRange returns the furthest right position held by the subtree
+// rooted at root, assuming that the left and right nodes have correct
+// range extents.
 func maxRange(root, left, right *Node) Comparable {
 	end := root.Elem.End()
 	if left != nil && left.Range.End().Compare(end) > 0 {

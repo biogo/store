@@ -53,6 +53,9 @@ func (n *IntNode) color() llrb.Color {
 	return n.Color
 }
 
+// intMaxRange returns the furthest right position held by the subtree
+// rooted at root, assuming that the left and right nodes have correct
+// range extents.
 func intMaxRange(root, left, right *IntNode) int {
 	end := root.Interval.End
 	if left != nil && left.Range.End > end {
