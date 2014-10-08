@@ -11,13 +11,11 @@ import (
 	"errors"
 )
 
+// Operation mode of the underlying LLRB tree.
 const (
 	TD234 = iota
 	BU23
 )
-
-// Operation mode of the underlying LLRB tree.
-const Mode = BU23
 
 func init() {
 	if Mode != TD234 && Mode != BU23 {
