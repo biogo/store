@@ -223,6 +223,150 @@ func (s *S) TestSet_2(c *check.C) {
 	}
 }
 
+func (s *S) TestSetRange_0(c *check.C) {
+	type posRange struct {
+		start, end int
+		val        Int
+	}
+	for i, t := range []struct {
+		start, end int
+		zero       Int
+		sets       []posRange
+		expect     string
+		count      int
+	}{
+		// Left overhang
+		{1, 10, 0,
+			[]posRange{
+				{-2, 0, 1},
+			},
+			"[-2:1 0:0 10:<nil>]",
+			2,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{-2, 0, 0},
+			},
+			"[-2:0 10:<nil>]",
+			1,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{-1, 1, 1},
+			},
+			"[-1:1 1:0 10:<nil>]",
+			2,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{-1, 1, 0},
+			},
+			"[-1:0 10:<nil>]",
+			1,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{-1, 2, 1},
+			},
+			"[-1:1 2:0 10:<nil>]",
+			2,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{-1, 2, 0},
+			},
+			"[-1:0 10:<nil>]",
+			1,
+		},
+
+		// Right overhang
+		{1, 10, 0,
+			[]posRange{
+				{11, 12, 1},
+			},
+			"[1:0 11:1 12:<nil>]",
+			2,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{11, 12, 0},
+			},
+			"[1:0 12:<nil>]",
+			1,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{11, 13, 1},
+			},
+			"[1:0 11:1 13:<nil>]",
+			2,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{11, 13, 0},
+			},
+			"[1:0 13:<nil>]",
+			1,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{1, 10, 1},
+				{11, 13, 1},
+			},
+			"[1:1 10:0 11:1 13:<nil>]",
+			3,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{1, 10, 1},
+				{11, 13, 0},
+			},
+			"[1:1 10:0 13:<nil>]",
+			2,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{10, 11, 1},
+			},
+			"[1:0 10:1 11:<nil>]",
+			2,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{10, 11, 0},
+			},
+			"[1:0 11:<nil>]",
+			1,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{9, 11, 1},
+			},
+			"[1:0 9:1 11:<nil>]",
+			2,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{9, 11, 0},
+			},
+			"[1:0 11:<nil>]",
+			1,
+		},
+	} {
+		sv, err := New(t.start, t.end, t.zero)
+		c.Assert(err, check.Equals, nil)
+		sv.Relaxed = true
+		c.Logf("subtest %d process", i)
+		for _, v := range t.sets {
+			in := fmt.Sprint(sv)
+			sv.SetRange(v.start, v.end, v.val)
+			c.Logf(" %s --%+v-> %s min:%+v max:%+v", in, v, sv, *sv.min, *sv.max)
+		}
+		c.Check(sv.String(), check.Equals, t.expect, check.Commentf("subtest %d", i))
+		c.Check(sv.Count(), check.Equals, t.count)
+	}
+}
+
 func (s *S) TestSetRange_1(c *check.C) {
 	type posRange struct {
 		start, end int
@@ -464,6 +608,18 @@ func (s *S) TestSetRange_2(c *check.C) {
 			},
 			"[1:0 2:1 3:0 10:<nil>]",
 		},
+		{1, 10, 0,
+			[]posRange{
+				{5, 20, 1},
+			},
+			"[1:0 5:1 20:<nil>]",
+		},
+		{1, 10, 0,
+			[]posRange{
+				{5, 10, 1},
+			},
+			"[1:0 5:1 10:<nil>]",
+		},
 	} {
 		sv, err := New(t.start, t.end, t.zero)
 		c.Assert(err, check.Equals, nil)
@@ -532,12 +688,13 @@ func (s *S) TestDo(c *check.C) {
 	for i, t := range []struct {
 		start, end int
 		zero       Int
+		relaxed    bool
 		sets       []posRange
 		setup      func()
 		fn         Operation
 		expect     interface{}
 	}{
-		{1, 10, 0,
+		{1, 10, 0, false,
 			[]posRange{
 				{1, 3, 3},
 				{4, 5, 1},
@@ -555,9 +712,43 @@ func (s *S) TestDo(c *check.C) {
 			},
 			[]Int{3, 3, 0, 1, 0, 0, 2, 0, 4},
 		},
+		{5, 10, 0, true,
+			[]posRange{
+				{5, 10, 1},
+				{1, 7, 1},
+			},
+			func() { data = []Int(nil) },
+			func(start, end int, vi Equaler) {
+				sl := data.([]Int)
+				v := vi.(Int)
+				for i := start; i < end; i++ {
+					sl = append(sl, v)
+				}
+				data = sl
+			},
+			[]Int{1, 1, 1, 1, 1, 1, 1, 1, 1},
+		},
+		{5, 10, 0, true,
+			[]posRange{
+				{5, 10, 1},
+				{3, 7, 1},
+				{1, 3, 1},
+			},
+			func() { data = []Int(nil) },
+			func(start, end int, vi Equaler) {
+				sl := data.([]Int)
+				v := vi.(Int)
+				for i := start; i < end; i++ {
+					sl = append(sl, v)
+				}
+				data = sl
+			},
+			[]Int{1, 1, 1, 1, 1, 1, 1, 1, 1},
+		},
 	} {
 		t.setup()
 		sv, err := New(t.start, t.end, t.zero)
+		sv.Relaxed = t.relaxed
 		c.Assert(err, check.Equals, nil)
 		for _, v := range t.sets {
 			sv.SetRange(v.start, v.end, v.val)

@@ -9,9 +9,10 @@
 package step
 
 import (
-	"code.google.com/p/biogo.store/llrb"
 	"errors"
 	"fmt"
+
+	"code.google.com/p/biogo.store/llrb"
 )
 
 var (
@@ -80,7 +81,7 @@ func (f Float) Equal(e Equaler) bool {
 type Vector struct {
 	Zero     Equaler // Ground state for the step vector.
 	Relaxed  bool    // If true, dynamic vector resize is allowed.
-	t        *llrb.Tree
+	t        llrb.Tree
 	min, max *position
 }
 
@@ -94,7 +95,6 @@ func New(start, end int, zero Equaler) (*Vector, error) {
 	}
 	v := &Vector{
 		Zero: zero,
-		t:    &llrb.Tree{},
 		min: &position{
 			pos: start,
 			val: zero,
@@ -240,11 +240,12 @@ func (v *Vector) Set(i int, e Equaler) {
 }
 
 // SetRange sets the value of positions [start, end) to e.
-// The underlying type of e must be comparable by reflect.DeepEqual.
 func (v *Vector) SetRange(start, end int, e Equaler) {
-	l := end - start
-	switch {
+	switch l := end - start; {
 	case l == 0:
+		if !v.Relaxed && (start < v.min.pos || start >= v.max.pos) {
+			panic(ErrOutOfRange)
+		}
 		return
 	case l == 1:
 		v.Set(start, e)
@@ -253,124 +254,105 @@ func (v *Vector) SetRange(start, end int, e Equaler) {
 		panic(ErrInvertedRange)
 	}
 
-	if end <= v.min.pos || v.max.pos <= start {
-		if !v.Relaxed {
-			panic(ErrOutOfRange)
-		}
+	if !v.Relaxed && (start < v.min.pos || end > v.max.pos || start == v.max.pos) {
+		panic(ErrOutOfRange)
+	}
 
-		if end <= v.min.pos {
-			if end == v.min.pos {
-				if e.Equal(v.min.val) {
-					v.min.pos -= l
-				} else {
-					v.min = &position{pos: start, val: e}
-					v.t.Insert(v.min)
-				}
-			} else {
-				if v.min.val.Equal(v.Zero) {
-					v.min.pos = end
-				} else {
-					v.min = &position{pos: end, val: v.Zero}
-					v.t.Insert(v.min)
-				}
-				if e.Equal(v.Zero) {
-					v.min.pos -= l
-				} else {
-					v.min = &position{pos: start, val: e}
-					v.t.Insert(v.min)
-				}
-			}
-		} else if start >= v.max.pos {
-			if start == v.max.pos {
-				v.max.pos += l
-				prev := v.t.Floor(query(start)).(*position)
-				if !e.Equal(prev.val) {
-					v.t.Insert(&position{pos: start, val: e})
-				}
-			} else {
-				mpos := v.max.pos
-				v.max.pos = end
-				prev := v.t.Floor(query(start)).(*position)
-				if !prev.val.Equal(v.Zero) {
-					v.t.Insert(&position{pos: mpos, val: v.Zero})
-				}
-				if !e.Equal(v.Zero) {
-					v.t.Insert(&position{pos: start, val: e})
-				}
-			}
+	// Do fast path complete vector replacement if possible.
+	if start <= v.min.pos && v.max.pos <= end {
+		v.t = llrb.Tree{}
+		*v.min = position{pos: start, val: e}
+		v.t.Insert(v.min)
+		v.max.pos = end
+		v.t.Insert(v.max)
+		return
+	}
+
+	// Handle cases where the given range is entirely outside the vector.
+	switch {
+	case start >= v.max.pos:
+		oldEnd := v.max.pos
+		v.max.pos = end
+		prev := v.t.Floor(query(oldEnd)).(*position)
+		if !prev.val.Equal(v.Zero) {
+			v.t.Insert(&position{pos: oldEnd, val: v.Zero})
+		}
+		last := v.t.Floor(query(start)).(*position)
+		if !e.Equal(last.val) {
+			v.t.Insert(&position{pos: start, val: e})
+		}
+		return
+	case end < v.min.pos:
+		if v.min.val.Equal(v.Zero) {
+			v.min.pos = end
+		} else {
+			v.t.Insert(&position{pos: end, val: v.Zero})
+		}
+		fallthrough
+	case end == v.min.pos:
+		if e.Equal(v.min.val) {
+			v.min.pos = start
+		} else {
+			v.min = &position{pos: start, val: e}
+			v.t.Insert(v.min)
 		}
 		return
 	}
 
+	// Handle cases where the given range
+	last := v.t.Floor(query(end)).(*position)
+	deleteRangeInclusive(&v.t, start, end)
+	switch {
+	// is entirely within the existing vector;
+	case v.min.pos < start && end <= v.max.pos:
+		prev := v.t.Floor(query(start)).(*position)
+		if !e.Equal(prev.val) {
+			v.t.Insert(&position{pos: start, val: e})
+		}
+		if last.val == nil {
+			v.t.Insert(v.max)
+		} else if !e.Equal(last.val) {
+			v.t.Insert(&position{pos: end, val: last.val})
+		}
+
+	// hangs over the left end and the right end is in the vector; or
+	case start <= v.min.pos:
+		lastVal := last.val
+		*v.min = position{pos: start, val: e}
+		v.t.Insert(v.min)
+
+		if !e.Equal(lastVal) {
+			v.t.Insert(&position{pos: end, val: lastVal})
+		}
+
+	// hangs over the right end and the left end is in the vector.
+	case end > v.max.pos:
+		v.max.pos = end
+		v.t.Insert(v.max)
+
+		prev := v.t.Floor(query(start)).(*position)
+		if e.Equal(prev.val) {
+			return
+		}
+		if last.val == nil || !e.Equal(last.val) {
+			v.t.Insert(&position{pos: start, val: e})
+		}
+
+	default:
+		panic("step: unexpected case")
+	}
+}
+
+// deleteRangeInclusive deletes all steps within the given range.
+// Note that llrb.(*Tree).DoRange does not operate on the node matching the end of a range.
+func deleteRangeInclusive(t *llrb.Tree, start, end int) {
 	var delQ []llrb.Comparable
-	v.t.DoRange(func(c llrb.Comparable) (done bool) {
+	t.DoRange(func(c llrb.Comparable) (done bool) {
 		delQ = append(delQ, c)
 		return
-	}, query(start), query(end))
+	}, query(start), query(end+1))
 	for _, p := range delQ {
-		v.t.Delete(p)
-	}
-
-	var la, lo *position
-	if len(delQ) > 0 {
-		lo = delQ[0].(*position)
-		la = delQ[len(delQ)-1].(*position)
-	} else {
-		lo = v.t.Floor(query(start)).(*position)
-		la = &position{}
-		*la = *lo
-	}
-
-	hi := v.t.Ceil(query(end)).(*position)
-	if start == lo.pos {
-		var prevSame bool
-		prev := v.t.Floor(query(start - 1))
-		if prev != nil {
-			prevSame = e.Equal(prev.(*position).val)
-		}
-		hiSame := hi != v.max && e.Equal(hi.val)
-		if hi.pos == end {
-			switch {
-			case hiSame && prevSame:
-				v.t.Delete(hi)
-			case prevSame:
-				return
-			case hiSame:
-				hi.pos = start
-			default:
-				if prev == nil {
-					v.min = &position{pos: start, val: e}
-					v.t.Insert(v.min)
-				} else {
-					v.t.Insert(&position{pos: start, val: e})
-				}
-			}
-		} else {
-			la.pos = end
-			if !e.Equal(la.val) {
-				v.t.Insert(la)
-			}
-			if prev == nil {
-				v.min = &position{pos: start, val: e}
-				v.t.Insert(v.min)
-			} else if !prevSame {
-				v.t.Insert(&position{pos: start, val: e})
-			}
-		}
-	} else {
-		if hi.pos == end {
-			if hi != v.max && e.Equal(hi.val) {
-				hi.pos = start
-			} else {
-				v.t.Insert(&position{pos: start, val: e})
-			}
-		} else {
-			v.t.Insert(&position{pos: start, val: e})
-			la.pos = end
-			if !e.Equal(la.val) {
-				v.t.Insert(la)
-			}
-		}
+		t.Delete(p)
 	}
 }
 
