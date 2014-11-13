@@ -302,7 +302,7 @@ func (v *Vector) SetRange(start, end int, e Equaler) {
 		return
 	}
 
-	delQ := []llrb.Comparable{}
+	var delQ []llrb.Comparable
 	v.t.DoRange(func(c llrb.Comparable) (done bool) {
 		delQ = append(delQ, c)
 		return
