@@ -52,7 +52,7 @@ type Comparable interface {
 	// Dims returns the number of dimensions described in the Comparable.
 	Dims() int
 
-	// Distance returns the squared Euclidian distance between the receiver and
+	// Distance returns the squared Euclidean distance between the receiver and
 	// the parameter.
 	Distance(Comparable) float64
 }
