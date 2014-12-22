@@ -202,6 +202,37 @@ func nearest(q Point, p Points) (Point, float64) {
 	return p[r], min
 }
 
+func (s *S) TestNearestRandom(c *check.C) {
+	const (
+		min = 0.
+		max = 1000.
+
+		dims    = 4
+		setSize = 10000
+	)
+
+	var randData Points
+	for i := 0; i < setSize; i++ {
+		p := make(Point, dims)
+		for j := 0; j < dims; j++ {
+			p[j] = (max-min)*rand.Float64() + min
+		}
+		randData = append(randData, p)
+	}
+	t := New(randData, false)
+
+	for i := 0; i < setSize; i++ {
+		q := make(Point, dims)
+		for j := 0; j < dims; j++ {
+			q[j] = (max-min)*rand.Float64() + min
+		}
+
+		p, _ := t.Nearest(q)
+		ep, _ := nearest(q, randData)
+		c.Assert(p, check.DeepEquals, ep, check.Commentf("Test %d: query %.3f expects %.3f", i, q, ep))
+	}
+}
+
 func (s *S) TestNearest(c *check.C) {
 	t := New(wpData, false)
 	for i, q := range append([]Point{
