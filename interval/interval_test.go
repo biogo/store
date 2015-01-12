@@ -8,7 +8,7 @@ import (
 	"code.google.com/p/biogo.store/llrb"
 	"flag"
 	"fmt"
-	check "launchpad.net/gocheck"
+	"gopkg.in/check.v1"
 	"math/rand"
 	"os"
 	"strings"

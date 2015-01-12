@@ -5,7 +5,7 @@
 package kdtree
 
 import (
-	check "launchpad.net/gocheck"
+	"gopkg.in/check.v1"
 	"math/rand"
 	"sort"
 	"testing"

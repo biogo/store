@@ -7,7 +7,7 @@ package landscape
 import (
 	"code.google.com/p/biogo.store/interval"
 	"fmt"
-	check "launchpad.net/gocheck"
+	"gopkg.in/check.v1"
 	"testing"
 )
 
