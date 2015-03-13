@@ -5,14 +5,16 @@
 package interval
 
 import (
-	"code.google.com/p/biogo.store/llrb"
 	"fmt"
-	"gopkg.in/check.v1"
 	"math/rand"
 	"os"
 	"strings"
 	"testing"
 	"unsafe"
+
+	"gopkg.in/check.v1"
+
+	"github.com/biogo/store/llrb"
 )
 
 // Integrity checks - translated from http://www.cs.princeton.edu/~rs/talks/LLRB/Java/RedBlackBST.java

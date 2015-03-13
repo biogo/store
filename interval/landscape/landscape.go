@@ -9,10 +9,10 @@
 package landscape
 
 import (
-	"code.google.com/p/biogo.store/interval"
-
 	"container/heap"
 	"sort"
+
+	"github.com/biogo/store/interval"
 )
 
 type endHeap []interval.IntInterface

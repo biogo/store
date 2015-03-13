@@ -5,8 +5,9 @@
 package interval_test
 
 import (
-	"code.google.com/p/biogo.store/interval"
 	"fmt"
+
+	"github.com/biogo/store/interval"
 )
 
 // Merge an interval into the tree, replacing overlapping intervals, but retaining them as sub intervals.

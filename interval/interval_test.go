@@ -5,15 +5,17 @@
 package interval
 
 import (
-	"code.google.com/p/biogo.store/llrb"
 	"flag"
 	"fmt"
-	"gopkg.in/check.v1"
 	"math/rand"
 	"os"
 	"strings"
 	"testing"
 	"unsafe"
+
+	"gopkg.in/check.v1"
+
+	"github.com/biogo/store/llrb"
 )
 
 var (

@@ -6,11 +6,12 @@ package step
 
 import (
 	"fmt"
-	"gopkg.in/check.v1"
 	"math"
 	"math/rand"
 	"reflect"
 	"testing"
+
+	"gopkg.in/check.v1"
 )
 
 // Tests

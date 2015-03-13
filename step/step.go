@@ -12,7 +12,7 @@ import (
 	"errors"
 	"fmt"
 
-	"code.google.com/p/biogo.store/llrb"
+	"github.com/biogo/store/llrb"
 )
 
 var (

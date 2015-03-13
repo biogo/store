@@ -5,10 +5,12 @@
 package landscape
 
 import (
-	"code.google.com/p/biogo.store/interval"
 	"fmt"
-	"gopkg.in/check.v1"
 	"testing"
+
+	"gopkg.in/check.v1"
+
+	"github.com/biogo/store/interval"
 )
 
 func Test(t *testing.T) { check.TestingT(t) }

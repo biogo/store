@@ -7,8 +7,9 @@
 package interval
 
 import (
-	"code.google.com/p/biogo.store/llrb"
 	"errors"
+
+	"github.com/biogo/store/llrb"
 )
 
 // Operation mode of the underlying LLRB tree.

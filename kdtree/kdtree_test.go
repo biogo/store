@@ -7,7 +7,6 @@ package kdtree
 import (
 	"flag"
 	"fmt"
-	"gopkg.in/check.v1"
 	"math/rand"
 	"os"
 	"reflect"
@@ -15,6 +14,8 @@ import (
 	"strings"
 	"testing"
 	"unsafe"
+
+	"gopkg.in/check.v1"
 )
 
 var (

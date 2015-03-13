@@ -5,8 +5,9 @@
 package interval_test
 
 import (
-	"code.google.com/p/biogo.store/interval"
 	"fmt"
+
+	"github.com/biogo/store/interval"
 )
 
 // Generic intervals

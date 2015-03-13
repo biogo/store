@@ -5,8 +5,9 @@
 package llrb_test
 
 import (
-	"code.google.com/p/biogo.store/llrb"
 	"fmt"
+
+	"github.com/biogo/store/llrb"
 )
 
 type (

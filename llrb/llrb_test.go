@@ -7,13 +7,14 @@ package llrb
 import (
 	"flag"
 	"fmt"
-	"gopkg.in/check.v1"
 	"math/rand"
 	"os"
 	"sort"
 	"strings"
 	"testing"
 	"unsafe"
+
+	"gopkg.in/check.v1"
 )
 
 var (

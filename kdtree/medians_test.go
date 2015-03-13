@@ -5,10 +5,11 @@
 package kdtree
 
 import (
-	"gopkg.in/check.v1"
 	"math/rand"
 	"sort"
 	"testing"
+
+	"gopkg.in/check.v1"
 )
 
 type Ints []int
