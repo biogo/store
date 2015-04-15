@@ -395,7 +395,13 @@ func (v *Vector) DoRange(from, to int, fn Operation) (err error) {
 	}
 
 	_, end, e, _ := v.StepAt(from)
+	if end > to {
+		end = to
+	}
 	fn(from, end, e)
+	if end == to {
+		return nil
+	}
 	v.t.DoRange(func(c llrb.Comparable) (done bool) {
 		p := c.(*position)
 		if p.pos != end {
