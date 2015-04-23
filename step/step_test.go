@@ -1097,7 +1097,7 @@ func (s *S) TestMutateRangePartial(c *check.C) {
 			nil,
 		},
 	} {
-		sv, err := New(94, 301, pair{})
+		sv, err := New(t.start, t.end, pair{})
 		c.Assert(err, check.Equals, nil)
 		for _, v := range t.sets {
 			sv.SetRange(v.start, v.end, v.val)
@@ -1119,7 +1119,7 @@ func (s *S) TestMutateRangePartial(c *check.C) {
 		})
 		if failed {
 			c.Errorf("setting pair[1]=true over [%d,%d) gives invalid vector near %d:\n%s",
-				113, 130, failedEnd, sv.String())
+				t.start, t.end, failedEnd, sv.String())
 		}
 		c.Check(sv.String(), check.Equals, t.expect, check.Commentf("subtest %d", i))
 	}
