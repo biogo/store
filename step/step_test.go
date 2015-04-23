@@ -621,6 +621,20 @@ func (s *S) TestSetRange_2(c *check.C) {
 			},
 			"[1:0 5:1 10:<nil>]",
 		},
+		{5, 10, 0,
+			[]posRange{
+				{5, 10, 1},
+				{1, 4, 1},
+			},
+			"[1:1 4:0 5:1 10:<nil>]",
+		},
+		{1, 4, 0,
+			[]posRange{
+				{1, 4, 1},
+				{5, 10, 1},
+			},
+			"[1:1 4:0 5:1 10:<nil>]",
+		},
 	} {
 		sv, err := New(t.start, t.end, t.zero)
 		c.Assert(err, check.Equals, nil)

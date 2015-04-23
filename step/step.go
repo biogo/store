@@ -286,7 +286,8 @@ func (v *Vector) SetRange(start, end int, e Equaler) {
 		if v.min.val.Equal(v.Zero) {
 			v.min.pos = end
 		} else {
-			v.t.Insert(&position{pos: end, val: v.Zero})
+			v.min = &position{pos: end, val: v.Zero}
+			v.t.Insert(v.min)
 		}
 		fallthrough
 	case end == v.min.pos:
