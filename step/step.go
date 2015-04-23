@@ -26,12 +26,20 @@ type (
 		pos int
 		val Equaler
 	}
+	lower int
 	query int
 	upper int
 )
 
 func (p *position) Compare(c llrb.Comparable) int {
 	return p.pos - c.(*position).pos
+}
+func (q lower) Compare(c llrb.Comparable) (d int) {
+	d = int(q) - c.(*position).pos
+	if d == 0 {
+		d = -1
+	}
+	return
 }
 func (q query) Compare(c llrb.Comparable) (d int) {
 	switch c := c.(type) {
@@ -522,7 +530,7 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 	if to < max {
 		p := v.t.Ceil(query(to)).(*position)
 		if p.pos > to && (p == v.max || !p.val.Equal(old.val)) {
-			if p.val == nil || p.val.Equal(v.t.Floor(query(p.pos-1)).(*position).val) {
+			if p.val == nil || p.val.Equal(v.t.Floor(lower(p.pos)).(*position).val) {
 				v.t.Insert(&position{pos: to, val: old.val})
 			}
 		} else if p.val.Equal(la) {
