@@ -510,7 +510,9 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 	if to < max {
 		p := v.t.Ceil(query(to)).(*position)
 		if p.pos > to && (p == v.max || !p.val.Equal(old.val)) {
-			v.t.Insert(&position{pos: to, val: old.val})
+			if p.val == nil || p.val.Equal(v.t.Floor(query(p.pos-1)).(*position).val) {
+				v.t.Insert(&position{pos: to, val: old.val})
+			}
 		} else if p.val.Equal(la) {
 			delQ = append(delQ, query(p.pos))
 		}

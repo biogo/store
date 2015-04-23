@@ -997,6 +997,19 @@ func (s *S) TestMutateRange(c *check.C) {
 			"[1:0 5:1 10:2 15:1 18:3 20:<nil>]",
 			nil,
 		},
+		{1, 20, 0,
+			[]posRange{
+				{1, 6, 1},
+				{6, 15, 2},
+				{15, 20, 1},
+			},
+			func(v Equaler) Equaler {
+				return Int(2)
+			},
+			4, 12,
+			"[1:1 4:2 15:1 20:<nil>]",
+			nil,
+		},
 		{1, 10, 0,
 			[]posRange{
 				{1, 3, 3},
@@ -1029,6 +1042,95 @@ func (s *S) TestMutateRange(c *check.C) {
 		}
 		c.Check(sv.ApplyRange(t.from, t.to, t.mutate), check.DeepEquals, t.err)
 		c.Check(sv.String(), check.Equals, t.expect, check.Commentf("subtest %d", i))
+	}
+}
+
+// pair is a [2]bool type satisfying the step.Equaler interface.
+type pair [2]bool
+
+// Equal returns whether p equals e. Equal assumes the underlying type of e is pair.
+func (p pair) Equal(e Equaler) bool {
+	return p == e.(pair)
+}
+
+func (s *S) TestMutateRangePartial(c *check.C) {
+	type posRange struct {
+		start, end int
+		val        pair
+	}
+	for i, t := range []struct {
+		start, end int
+		zero       pair
+		sets       []posRange
+		mutate     Mutator
+		from, to   int
+		expect     string
+		err        error
+	}{
+		{94, 301, pair{},
+			[]posRange{
+				{94, 120, pair{false, false}},
+				{120, 134, pair{false, true}},
+				{134, 301, pair{false, false}},
+			},
+			func(e Equaler) Equaler {
+				p := e.(pair)
+				p[1] = true
+				return p
+			},
+			113, 130,
+			"[94:[false false] 113:[false true] 134:[false false] 301:<nil>]",
+			nil,
+		},
+	} {
+		sv, err := New(94, 301, pair{})
+		c.Assert(err, check.Equals, nil)
+		for _, v := range t.sets {
+			sv.SetRange(v.start, v.end, v.val)
+		}
+
+		c.Check(sv.ApplyRange(t.from, t.to, t.mutate), check.DeepEquals, t.err)
+
+		var (
+			last      Equaler
+			failed    = false
+			failedEnd int
+		)
+		sv.Do(func(start, end int, e Equaler) {
+			if e == last {
+				failed = true
+				failedEnd = end
+			}
+			last = e
+		})
+		if failed {
+			c.Errorf("setting pair[1]=true over [%d,%d) gives invalid vector near %d:\n%s",
+				113, 130, failedEnd, sv.String())
+		}
+		c.Check(sv.String(), check.Equals, t.expect, check.Commentf("subtest %d", i))
+	}
+}
+
+func (s *S) TestMutateRangePartialFuzzing(c *check.C) {
+	sv, err := New(0, 1000, pair{})
+	c.Assert(err, check.Equals, nil)
+	for i := 0; i < 100; i++ {
+		s := rand.Intn(980)
+		l := rand.Intn(20)
+		j := rand.Intn(2)
+		c.Check(sv.ApplyRange(s, s+l, func(e Equaler) Equaler {
+			p := e.(pair)
+			p[j] = true
+			return p
+		}), check.DeepEquals, nil)
+		var last Equaler
+		sv.Do(func(start, end int, e Equaler) {
+			if e == last {
+				c.Fatalf("iteration %d: setting pair[%d]=true over [%d,%d) gives invalid vector near %d:\n%s",
+					i, j, s, s+l, end, sv.String())
+			}
+			last = e
+		})
 	}
 }
 
