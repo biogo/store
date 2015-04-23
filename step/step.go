@@ -478,7 +478,7 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 		max  = v.max.pos
 		delQ []query
 	)
-	if to <= min || from >= max {
+	if !v.Relaxed && (to <= min || from >= max) {
 		return ErrOutOfRange
 	}
 	if from < min {
