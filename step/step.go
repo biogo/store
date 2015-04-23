@@ -481,6 +481,17 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 	if to <= min || from >= max {
 		return ErrOutOfRange
 	}
+	if from < min {
+		if v.Relaxed {
+			v.SetRange(from, min, v.Zero)
+		}
+
+	}
+	if max < to {
+		if v.Relaxed {
+			v.SetRange(max, to, v.Zero)
+		}
+	}
 
 	var end int
 	old.pos, end, old.val, _ = v.StepAt(from)
