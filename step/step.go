@@ -125,7 +125,7 @@ func (v *Vector) Count() int { return v.t.Len() - 1 }
 
 // At returns the value of the vector at position i. If i is outside the extent
 // of the vector an error is returned.
-func (v *Vector) At(i int) (e Equaler, err error) {
+func (v *Vector) At(i int) (Equaler, error) {
 	if i < v.Start() || i >= v.End() {
 		return nil, ErrOutOfRange
 	}
@@ -381,7 +381,7 @@ func (v *Vector) Do(fn Operation) {
 // Do performs the function fn on steps stored in the Vector over the range [from, to)
 // in ascending sort order of start position. fn is passed the start, end and value of
 // the step.
-func (v *Vector) DoRange(from, to int, fn Operation) (err error) {
+func (v *Vector) DoRange(from, to int, fn Operation) error {
 	if to < from {
 		return ErrInvertedRange
 	}
@@ -414,7 +414,7 @@ func (v *Vector) DoRange(from, to int, fn Operation) (err error) {
 		fn(la.pos, to, la.val)
 	}
 
-	return
+	return nil
 }
 
 // A Mutator is a function that is used by Apply and ApplyRange to alter values within
@@ -467,7 +467,7 @@ func (v *Vector) Apply(m Mutator) {
 // Apply applies the mutator function m to steps stored in the Vector in over the range
 // [from, to) in ascending sort order of start position. Redundant steps resulting from
 // changes in step values are erased.
-func (v *Vector) ApplyRange(from, to int, m Mutator) (err error) {
+func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 	if to < from {
 		return ErrInvertedRange
 	}
@@ -488,7 +488,7 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) (err error) {
 	la = m(la)
 	if to <= end {
 		v.SetRange(from, to, la)
-		return
+		return nil
 	}
 	if !la.Equal(old.val) {
 		v.t.Insert(&position{from, la})
@@ -520,7 +520,7 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) (err error) {
 		v.t.Delete(d)
 	}
 
-	return
+	return nil
 }
 
 // String returns a string representation a Vector, displaying step start
