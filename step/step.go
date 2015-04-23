@@ -494,7 +494,6 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 		if v.Relaxed {
 			v.SetRange(from, min, v.Zero)
 		}
-
 	}
 	if max < to {
 		if v.Relaxed {
@@ -511,7 +510,11 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 		return nil
 	}
 	if !la.Equal(old.val) {
-		v.t.Insert(&position{from, la})
+		if from < min {
+			v.SetRange(from, min, la)
+		} else {
+			v.t.Insert(&position{from, la})
+		}
 	}
 	v.t.DoRange(func(c llrb.Comparable) (done bool) {
 		p := c.(*position)
@@ -536,6 +539,9 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 		} else if p.val.Equal(la) {
 			delQ = append(delQ, query(p.pos))
 		}
+	}
+	if to > max {
+		v.SetRange(max, to, m(v.Zero))
 	}
 
 	for _, d := range delQ {

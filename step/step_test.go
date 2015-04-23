@@ -1096,9 +1096,49 @@ func (s *S) TestMutateRangePartial(c *check.C) {
 			"[94:[false false] 113:[false true] 134:[false false] 301:<nil>]",
 			nil,
 		},
+		{253121,253565, pair{},
+			[]posRange{
+				{253121,253565, pair{false, true}},
+			},
+			func(e Equaler) Equaler {
+				p := e.(pair)
+				p[1] = true
+				return p
+			},
+			253115, 253565,
+			"[253115:[false true] 253565:<nil>]",
+			nil,
+		},
+		{253121,253565, pair{},
+			[]posRange{
+				{253121,253565, pair{false, true}},
+			},
+			func(e Equaler) Equaler {
+				p := e.(pair)
+				p[1] = true
+				return p
+			},
+			253121, 253575,
+			"[253121:[false true] 253575:<nil>]",
+			nil,
+		},
+		{253121,253565, pair{},
+			[]posRange{
+				{253121,253565, pair{false, true}},
+			},
+			func(e Equaler) Equaler {
+				p := e.(pair)
+				p[1] = true
+				return p
+			},
+			253115, 253575,
+			"[253115:[false true] 253575:<nil>]",
+			nil,
+		},
 	} {
 		sv, err := New(t.start, t.end, pair{})
 		c.Assert(err, check.Equals, nil)
+		sv.Relaxed = true
 		for _, v := range t.sets {
 			sv.SetRange(v.start, v.end, v.val)
 		}
