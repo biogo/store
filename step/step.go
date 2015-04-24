@@ -214,6 +214,9 @@ func (v *Vector) Set(i int, e Equaler) {
 			if hi != v.max && e.Equal(hi.val) {
 				v.t.Delete(query(i))
 				hi.pos--
+				if v.min.pos == i {
+					v.min = hi
+				}
 			} else {
 				lo.val = e
 			}
@@ -281,9 +284,11 @@ func (v *Vector) SetRange(start, end int, e Equaler) {
 	case start >= v.max.pos:
 		oldEnd := v.max.pos
 		v.max.pos = end
-		prev := v.t.Floor(query(oldEnd)).(*position)
-		if !prev.val.Equal(v.Zero) {
-			v.t.Insert(&position{pos: oldEnd, val: v.Zero})
+		if start != oldEnd {
+			prev := v.t.Floor(query(oldEnd)).(*position)
+			if !prev.val.Equal(v.Zero) {
+				v.t.Insert(&position{pos: oldEnd, val: v.Zero})
+			}
 		}
 		last := v.t.Floor(query(start)).(*position)
 		if !e.Equal(last.val) {
@@ -480,6 +485,9 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 	if to < from {
 		return ErrInvertedRange
 	}
+	if from == to {
+		return nil
+	}
 	var (
 		la   Equaler
 		old  position
@@ -490,13 +498,11 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 	if !v.Relaxed && (to <= min || from >= max) {
 		return ErrOutOfRange
 	}
-	if from < min {
-		if v.Relaxed {
+	if v.Relaxed {
+		if from < min {
 			v.SetRange(from, min, v.Zero)
 		}
-	}
-	if max < to {
-		if v.Relaxed {
+		if max < to {
 			v.SetRange(max, to, v.Zero)
 		}
 	}
@@ -510,16 +516,32 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 		return nil
 	}
 	if !la.Equal(old.val) {
-		if from < min {
+		switch {
+		case from > min:
+			if !la.Equal(v.t.Floor(lower(from)).(*position).val) {
+				v.t.Insert(&position{from, la})
+			} else {
+				v.t.Delete(query(from))
+			}
+		case from < min:
 			v.SetRange(from, min, la)
-		} else {
-			v.t.Insert(&position{from, la})
+		default:
+			*v.min = position{from, la}
 		}
 	}
+
+	var tail *position
 	v.t.DoRange(func(c llrb.Comparable) (done bool) {
 		p := c.(*position)
 		if p.pos == max {
-			return true
+			// We should be at v.t.Max(), but don't stop
+			// just in case there is more. We want to fail
+			// noisily if max < v.t.Max().
+			return
+		}
+		if p.pos == to {
+			tail = p
+			return
 		}
 		old = *p // Needed for fix-up of last step if to is not at a step boundary.
 		p.val = m(p.val)
@@ -528,24 +550,27 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 		}
 		la = p.val
 		return
-	}, query(end), query(to))
-
-	if to < max {
-		p := v.t.Ceil(query(to)).(*position)
-		if p.pos > to && (p == v.max || !p.val.Equal(old.val)) {
-			if p.val == nil || p.val.Equal(v.t.Floor(lower(p.pos)).(*position).val) {
-				v.t.Insert(&position{pos: to, val: old.val})
-			}
-		} else if p.val.Equal(la) {
-			delQ = append(delQ, query(p.pos))
-		}
-	}
-	if to > max {
-		v.SetRange(max, to, m(v.Zero))
-	}
-
+	}, query(end), upper(to))
 	for _, d := range delQ {
 		v.t.Delete(d)
+	}
+	if to < max {
+		if tail == nil {
+			prev := v.t.Floor(lower(to)).(*position)
+			if !old.val.Equal(prev.val) {
+				v.t.Insert(&position{to, old.val})
+			}
+		} else {
+			prev := v.t.Floor(lower(tail.pos)).(*position)
+			if tail.val != nil && tail.val.Equal(prev.val) {
+				v.t.Delete(query(tail.pos))
+			}
+		}
+		return nil
+	}
+
+	if v.Relaxed && to > max {
+		v.SetRange(max, to, m(v.Zero))
 	}
 
 	return nil
@@ -555,7 +580,7 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 // positions and values. The last step indicates the end of the vector and
 // always has an associated value of nil.
 func (v *Vector) String() string {
-	sb := []string(nil)
+	sb := make([]string, 0, v.t.Len())
 	v.t.Do(func(c llrb.Comparable) (done bool) {
 		p := c.(*position)
 		sb = append(sb, fmt.Sprintf("%d:%v", p.pos, p.val))

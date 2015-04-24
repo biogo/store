@@ -5,6 +5,7 @@
 package step
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"math/rand"
@@ -987,6 +988,18 @@ func (s *S) TestMutateRange(c *check.C) {
 		{1, 10, 0,
 			[]posRange{
 				{1, 3, 3},
+				{4, 5, 1},
+				{7, 9, 2},
+				{9, 10, 4},
+			},
+			func(_ Equaler) Equaler { return Int(0) },
+			2, 8,
+			"[1:3 2:0 8:2 9:4 10:<nil>]",
+			nil,
+		},
+		{1, 10, 0,
+			[]posRange{
+				{1, 3, 3},
 				{7, 8, 1},
 				{9, 10, 4},
 			},
@@ -1096,9 +1109,9 @@ func (s *S) TestMutateRangePartial(c *check.C) {
 			"[94:[false false] 113:[false true] 134:[false false] 301:<nil>]",
 			nil,
 		},
-		{253121,253565, pair{},
+		{253121, 253565, pair{},
 			[]posRange{
-				{253121,253565, pair{false, true}},
+				{253121, 253565, pair{false, true}},
 			},
 			func(e Equaler) Equaler {
 				p := e.(pair)
@@ -1109,9 +1122,9 @@ func (s *S) TestMutateRangePartial(c *check.C) {
 			"[253115:[false true] 253565:<nil>]",
 			nil,
 		},
-		{253121,253565, pair{},
+		{253121, 253565, pair{},
 			[]posRange{
-				{253121,253565, pair{false, true}},
+				{253121, 253565, pair{false, true}},
 			},
 			func(e Equaler) Equaler {
 				p := e.(pair)
@@ -1122,9 +1135,9 @@ func (s *S) TestMutateRangePartial(c *check.C) {
 			"[253121:[false true] 253575:<nil>]",
 			nil,
 		},
-		{253121,253565, pair{},
+		{253121, 253565, pair{},
 			[]posRange{
-				{253121,253565, pair{false, true}},
+				{253121, 253565, pair{false, true}},
 			},
 			func(e Equaler) Equaler {
 				p := e.(pair)
@@ -1133,6 +1146,45 @@ func (s *S) TestMutateRangePartial(c *check.C) {
 			},
 			253115, 253575,
 			"[253115:[false true] 253575:<nil>]",
+			nil,
+		},
+		{0, 13, pair{},
+			[]posRange{
+				{0, 1, pair{false, false}},
+				{1, 2, pair{false, true}},
+				{2, 4, pair{true, true}},
+				{4, 6, pair{true, false}},
+				{6, 7, pair{false, false}},
+				{7, 9, pair{false, true}},
+				{9, 13, pair{false, false}},
+			},
+			func(e Equaler) Equaler {
+				p := e.(pair)
+				p[1] = false
+				return p
+			},
+			8, 11,
+			"[0:[false false] 1:[false true] 2:[true true] 4:[true false] 6:[false false] 7:[false true] 8:[false false] 13:<nil>]",
+			nil,
+		},
+		{0, 13, pair{},
+			[]posRange{
+				{0, 1, pair{false, false}},
+				{1, 2, pair{false, true}},
+				{2, 3, pair{true, false}},
+				{3, 6, pair{true, false}},
+				{6, 7, pair{false, true}},
+				{7, 9, pair{true, true}},
+				{9, 10, pair{true, false}},
+				{10, 13, pair{false, false}},
+			},
+			func(e Equaler) Equaler {
+				p := e.(pair)
+				p[1] = false
+				return p
+			},
+			1, 5,
+			"[0:[false false] 2:[true false] 6:[false true] 7:[true true] 9:[true false] 10:[false false] 13:<nil>]",
 			nil,
 		},
 	} {
@@ -1153,7 +1205,7 @@ func (s *S) TestMutateRangePartial(c *check.C) {
 		sv.Do(func(start, end int, e Equaler) {
 			if e == last {
 				failed = true
-				failedEnd = end
+				failedEnd = start
 			}
 			last = e
 		})
@@ -1165,26 +1217,166 @@ func (s *S) TestMutateRangePartial(c *check.C) {
 	}
 }
 
+type vector struct {
+	min, max int
+	data     []Equaler
+}
+
+func newVector(start, end, cap int, zero Equaler) *vector {
+	data := make([]Equaler, cap)
+	for i := range data {
+		data[i] = zero
+	}
+	return &vector{
+		min:  start,
+		max:  end,
+		data: data,
+	}
+}
+
+func (v *vector) setRange(start, end int, e Equaler) {
+	if start == end {
+		return
+	}
+	if start < v.min {
+		v.min = start
+	}
+	if end > v.max {
+		v.max = end
+	}
+	for i := start; i < end; i++ {
+		v.data[i] = e
+	}
+}
+
+func (v *vector) applyRange(start, end int, m Mutator) {
+	if start == end {
+		return
+	}
+	if start < v.min {
+		v.min = start
+	}
+	if end > v.max {
+		v.max = end
+	}
+	for i := start; i < end; i++ {
+		v.data[i] = m(v.data[i])
+	}
+}
+
+func (v *vector) aggreesWith(sv *Vector) bool {
+	if v.min != sv.Start() || v.max != sv.End() {
+		return false
+	}
+	ok := true
+	sv.Do(func(start, end int, e Equaler) {
+		for _, ve := range v.data[start:end] {
+			if e != ve {
+				ok = false
+			}
+		}
+	})
+	return ok
+}
+
+func (v *vector) String() string {
+	var (
+		buf  bytes.Buffer
+		last Equaler
+	)
+	fmt.Fprint(&buf, "[")
+	for i := v.min; i < v.max; i++ {
+		if v.data[i] != last {
+			fmt.Fprintf(&buf, "%d:%v ", i, v.data[i])
+		}
+		last = v.data[i]
+	}
+	fmt.Fprintf(&buf, "%d:<nil>]", v.max)
+	return buf.String()
+}
+
 func (s *S) TestMutateRangePartialFuzzing(c *check.C) {
-	sv, err := New(0, 1000, pair{})
+	rand.Seed(1)
+	sv, err := New(0, 1, pair{})
 	c.Assert(err, check.Equals, nil)
-	for i := 0; i < 100; i++ {
-		s := rand.Intn(980)
-		l := rand.Intn(20)
+	sv.Relaxed = true
+	v := newVector(0, 1, 15, pair{})
+	var prev, prevArray string
+	for i := 0; i < 100000; i++ {
+		s := rand.Intn(10)
+		l := rand.Intn(5)
 		j := rand.Intn(2)
+		f := rand.Intn(2) < 1
 		c.Check(sv.ApplyRange(s, s+l, func(e Equaler) Equaler {
 			p := e.(pair)
-			p[j] = true
+			p[j] = f
 			return p
 		}), check.DeepEquals, nil)
+		v.applyRange(s, s+l, func(e Equaler) Equaler {
+			p := e.(pair)
+			p[j] = f
+			return p
+		})
+		now := sv.String()
+		array := v.String()
+		c.Assert(sv.min, check.DeepEquals, sv.t.Min(),
+			check.Commentf("invalid tree after iteration %d: set [%d,%d) pair[%d]=%t:\nwas: %v\nis:  %s", i, s, s+l, j, f, prev, now),
+		)
+		c.Assert(sv.max, check.DeepEquals, sv.t.Max(),
+			check.Commentf("invalid tree after iteration %d: set [%d,%d) pair[%d]=%t:\nwas: %v\nis:  %s", i, s, s+l, j, f, prev, now),
+		)
+		c.Assert(v.aggreesWith(sv), check.Equals, true,
+			check.Commentf("vector disagreement after iteration %d: set [%d,%d) pair[%d]=%t:\nwas:   %s\narray: %v\nwas:   %s\nstep:  %s",
+				i, s, s+l, j, f, prevArray, array, prev, now),
+		)
 		var last Equaler
 		sv.Do(func(start, end int, e Equaler) {
 			if e == last {
-				c.Fatalf("iteration %d: setting pair[%d]=true over [%d,%d) gives invalid vector near %d:\n%s",
-					i, j, s, s+l, end, sv.String())
+				c.Fatalf("iteration %d: setting pair[%d]=%t over [%d,%d) gives invalid vector near %d:\nwas: %s\nis:  %s\nwant:%s",
+					i, j, f, s, s+l, start, prev, now, array)
 			}
 			last = e
 		})
+		prev = now
+		prevArray = array
+	}
+}
+
+func (s *S) TestSetRangeFuzzing(c *check.C) {
+	rand.Seed(2)
+	sv, err := New(0, 1, pair{})
+	c.Assert(err, check.Equals, nil)
+	sv.Relaxed = true
+	v := newVector(0, 1, 15, pair{})
+	var prev, prevArray string
+	for i := 0; i < 100000; i++ {
+		s := rand.Intn(10)
+		l := rand.Intn(5)
+		f := pair{rand.Intn(2) < 1, rand.Intn(2) < 1}
+		sv.SetRange(s, s+l, f)
+		v.setRange(s, s+l, f)
+		now := sv.String()
+		array := v.String()
+		c.Assert(sv.min, check.DeepEquals, sv.t.Min(),
+			check.Commentf("invalid tree after iteration %d: set [%d,%d) to %#v:\nwas: %v\nis:  %s", i, s, s+l, f, prev, now),
+		)
+		c.Assert(sv.max, check.DeepEquals, sv.t.Max(),
+			check.Commentf("invalid tree after iteration %d: set [%d,%d) to %#v:\nwas: %v\nis:  %s", i, s, s+l, f, prev, now),
+		)
+		c.Assert(v.aggreesWith(sv), check.Equals, true,
+			check.Commentf("vector disagreement after iteration %d: set [%d,%d) to %#v:\nwas:   %s\narray: %v\nwas:   %s\nstep:  %s",
+				i, s, s+l, f, prevArray, array, prev, now),
+		)
+		var last Equaler
+		sv.Do(func(start, end int, e Equaler) {
+			if e == last {
+				c.Fatalf("iteration %d: setting pair=%#v over [%d,%d) gives invalid vector near %d:\nwas: %s\nis:  %s\nwant:%s",
+					i, f, s, s+l, start, prev, now, array)
+			}
+			last = e
+		})
+		prev = now
+		prevArray = array
 	}
 }
 
