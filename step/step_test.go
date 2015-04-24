@@ -1217,6 +1217,72 @@ func (s *S) TestMutateRangePartial(c *check.C) {
 	}
 }
 
+func (s *S) TestMutatorSetting(c *check.C) {
+	type posRange struct {
+		start, end int
+	}
+	for i, t := range []struct {
+		sets   []posRange
+		max int
+		expect string
+		err    error
+	}{
+		{
+			[]posRange{
+				{30, 70},
+				{10, 50},
+			},
+			70,
+			"[10:[false true] 70:<nil>]",
+			nil,
+		},
+		{
+			[]posRange{
+				{10, 50},
+				{30, 70},
+			},
+			70,
+			"[10:[false true] 70:<nil>]",
+			nil,
+		},
+		{
+			[]posRange{
+				{30, 50},
+				{10, 70},
+			},
+			70,
+			"[10:[false true] 70:<nil>]",
+			nil,
+		},
+		{
+			[]posRange{
+				{10, 70},
+				{30, 50},
+			},
+			70,
+			"[10:[false true] 70:<nil>]",
+			nil,
+		},
+	} {
+		sv, err := New(t.sets[0].start, t.sets[0].end, pair{})
+		c.Assert(err, check.Equals, nil)
+		sv.Relaxed = true
+		av := newVector(t.sets[0].start, t.sets[0].end, t.max, pair{})
+		for _, v := range t.sets {
+			m := func(e Equaler) Equaler {
+				p := e.(pair)
+				p[1] = true
+				return p
+			}
+			c.Check(sv.ApplyRange(v.start, v.end, m), check.DeepEquals, t.err)
+			av.applyRange(v.start, v.end, m)
+		}
+
+		c.Check(sv.String(), check.Equals, t.expect, check.Commentf("subtest %d", i))
+		c.Check(av.aggreesWith(sv), check.Equals, true)
+	}
+}
+
 type vector struct {
 	min, max int
 	data     []Equaler
@@ -1377,6 +1443,82 @@ func (s *S) TestSetRangeFuzzing(c *check.C) {
 		})
 		prev = now
 		prevArray = array
+	}
+}
+
+func (s *S) TestAgreementFuzzing(c *check.C) {
+	rand.Seed(1)
+	mutV, err := New(0, 1, pair{})
+	c.Assert(err, check.Equals, nil)
+	mutV.Relaxed = true
+	setV, err := New(0, 1, pair{})
+	c.Assert(err, check.Equals, nil)
+	setV.Relaxed = true
+	var (
+		prevSet, prevMut string
+		setLen           int
+	)
+	// Set up agreeing representations of intervals.
+	for i := 0; i < 100000; i++ {
+		s := rand.Intn(1000)
+		l := rand.Intn(50)
+		setV.SetRange(s, s+l, pair{true, false})
+		c.Assert(mutV.ApplyRange(s, s+l, func(e Equaler) Equaler {
+			p := e.(pair)
+			p[0] = true
+			return p
+		}), check.Equals, nil)
+
+		setNow := setV.String()
+		mutNow := mutV.String()
+		var mutLen int
+		setLen = 0
+		setV.Do(func(start, end int, e Equaler) {
+			p := e.(pair)
+			if p[0] {
+				setLen += end - start
+			}
+		})
+		mutV.Do(func(start, end int, e Equaler) {
+			p := e.(pair)
+			if p[0] {
+				mutLen += end - start
+			}
+		})
+		if setLen != mutLen {
+			c.Fatalf("length disagreement after iteration %d: %d != %d\nset was: %s\nmut was: %s\nset now: %s\nmut now: %s",
+				i, setLen, mutLen, prevSet, prevMut, setNow, mutNow)
+		}
+
+		prevSet = setNow
+		prevMut = mutNow
+	}
+
+	// Mutate the other element of steps in the mutating vector, checking for changes
+	// in position 0 of the steps.
+	for i := 0; i < 100000; i++ {
+		s := rand.Intn(1000)
+		l := rand.Intn(50)
+		c.Assert(mutV.ApplyRange(s, s+l, func(e Equaler) Equaler {
+			p := e.(pair)
+			p[1] = rand.Intn(2) < 1
+			return p
+		}), check.Equals, nil)
+
+		mutNow := mutV.String()
+		var mutLen int
+		mutV.Do(func(start, end int, e Equaler) {
+			p := e.(pair)
+			if p[0] {
+				mutLen += end - start
+			}
+		})
+		if setLen != mutLen {
+			c.Fatalf("length disagreement after iteration %d: %d != %d\nmut was: %s\nmut now: %s",
+				i, setLen, mutLen, prevMut, mutNow)
+		}
+
+		prevMut = mutNow
 	}
 }
 

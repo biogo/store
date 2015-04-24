@@ -557,7 +557,7 @@ func (v *Vector) ApplyRange(from, to int, m Mutator) error {
 	if to < max {
 		if tail == nil {
 			prev := v.t.Floor(lower(to)).(*position)
-			if !old.val.Equal(prev.val) {
+			if old.pos != from && !old.val.Equal(prev.val) {
 				v.t.Insert(&position{to, old.val})
 			}
 		} else {
