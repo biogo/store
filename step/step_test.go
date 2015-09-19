@@ -1223,7 +1223,7 @@ func (s *S) TestMutatorSetting(c *check.C) {
 	}
 	for i, t := range []struct {
 		sets   []posRange
-		max int
+		max    int
 		expect string
 		err    error
 	}{
