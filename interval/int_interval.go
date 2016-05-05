@@ -236,14 +236,14 @@ func (n *IntNode) insert(e IntInterface, r IntRange, id uintptr, fast bool) (roo
 
 	switch c := r.Start - n.Interval.Start; {
 	case c == 0:
-		switch cid := id - n.Elem.ID(); {
-		case cid == 0:
+		switch {
+		case id == n.Elem.ID():
 			n.Elem = e
 			n.Interval = r
 			if !fast {
 				n.Range.End = r.End
 			}
-		case cid < 0:
+		case id < n.Elem.ID():
 			n.Left, d = n.Left.insert(e, r, id, fast)
 		default:
 			n.Right, d = n.Right.insert(e, r, id, fast)
@@ -446,10 +446,10 @@ func (n *IntNode) floor(m int, id uintptr) *IntNode {
 	}
 	switch c := m - n.Interval.Start; {
 	case c == 0:
-		switch cid := id - n.Elem.ID(); {
-		case cid == 0:
+		switch {
+		case id == n.Elem.ID():
 			return n
-		case cid < 0:
+		case id < n.Elem.ID():
 			return n.Left.floor(m, id)
 		default:
 			if r := n.Right.floor(m, id); r != nil {
@@ -485,10 +485,10 @@ func (n *IntNode) ceil(m int, id uintptr) *IntNode {
 	}
 	switch c := m - n.Interval.Start; {
 	case c == 0:
-		switch cid := id - n.Elem.ID(); {
-		case cid == 0:
+		switch {
+		case id == n.Elem.ID():
 			return n
-		case cid > 0:
+		case id > n.Elem.ID():
 			return n.Right.ceil(m, id)
 		default:
 			if l := n.Left.ceil(m, id); l != nil {
