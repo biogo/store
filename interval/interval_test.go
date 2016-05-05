@@ -789,6 +789,18 @@ func (s *S) TestIssue15(c *check.C) {
 	c.Check(len(got), check.Equals, 1, check.Commentf("Expected one overlap, got %d", len(got)))
 }
 
+func (s *S) TestInsertBug(c *check.C) {
+	var t Tree
+	for i := 10; i > 0; i-- {
+		t.Insert(&overlap{start: 0, end: 1, id: uintptr(i)}, false)
+	}
+	c.Check(t.Len(), check.Equals, 10, check.Commentf("Expected 10 entries, got %d", t.Len()))
+	for i := 1; i <= 10; i++ {
+		t.Delete(&overlap{start: 0, end: 1, id: uintptr(i)}, false)
+	}
+	c.Check(t.Len(), check.Equals, 0, check.Commentf("Expected 0 entries, got %d", t.Len()))
+}
+
 func (t *Tree) dot(label string) string {
 	if t == nil {
 		return ""
