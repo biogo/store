@@ -147,10 +147,7 @@ func buildBounded(p bounder, plane Dim, bounding bool) *Node {
 	d := p.Index(piv)
 	np := (plane + 1) % Dim(d.Dims())
 
-	var b *Bounding
-	if bounding {
-		b = p.Bounds()
-	}
+	b := p.Bounds()
 	return &Node{
 		Point:    d,
 		Plane:    plane,
@@ -362,11 +359,20 @@ func (t *Tree) NearestSet(k Keeper, q Comparable) {
 		return
 	}
 	t.Root.searchSet(q, k)
-	if k.Len() == 1 {
-		return
-	}
+
+	// Check whether we have retained a sentinel
+	// and flag removal if we have.
+	removeSentinel := k.Len() != 0 && k.Max().Comparable == nil
+
 	sort.Sort(sort.Reverse(k))
-	return
+
+	// This abuses the interface to drop the max.
+	// It is reasonable to do this because we know
+	// that the maximum value will now be at element
+	// zero, which is removed by the Pop method.
+	if removeSentinel {
+		k.Pop()
+	}
 }
 
 func (n *Node) searchSet(q Comparable, k Keeper) {
@@ -437,8 +443,7 @@ func (t *Tree) DoBounded(fn Operation, b *Bounding) bool {
 }
 
 func (n *Node) doBounded(fn Operation, b *Bounding, depth int) (done bool) {
-	lc, hc := b[0].Compare(n.Point, n.Plane), b[1].Compare(n.Point, n.Plane)
-	if lc < 0 && n.Left != nil {
+	if n.Left != nil && b[0].Compare(n.Point, n.Plane) < 0 {
 		done = n.Left.doBounded(fn, b, depth+1)
 		if done {
 			return
@@ -450,7 +455,7 @@ func (n *Node) doBounded(fn Operation, b *Bounding, depth int) (done bool) {
 			return
 		}
 	}
-	if hc > 0 && n.Right != nil {
+	if n.Right != nil && 0 < b[1].Compare(n.Point, n.Plane) {
 		done = n.Right.doBounded(fn, b, depth+1)
 	}
 	return
