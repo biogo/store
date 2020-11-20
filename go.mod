@@ -1,6 +1,6 @@
 module github.com/biogo/store
 
-go 1.12
+go 1.14
 
 require (
 	github.com/kr/pretty v0.2.0 // indirect
